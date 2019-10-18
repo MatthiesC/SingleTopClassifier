@@ -1,2 +1,5 @@
 *~
 *.pyc
+*.root
+*.npy
+*.png
