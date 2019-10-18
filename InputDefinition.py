@@ -105,11 +105,11 @@ def compileInputList(n_hotvr, n_jets):
     for i in range(n_hotvr):
         for var in template_hotvr:
             if var[1] == True:
-                inputList.append("DNN__hotvr"+str(i)+"_"+var[0])
+                inputList.append("DNN__hotvr"+str(i+1)+"_"+var[0])
     for i in range(n_jets):
         for var in template_jet:
             if var[1] == True:
-                inputList.append("DNN__jet"+str(i)+"_"+var[0])
+                inputList.append("DNN__jet"+str(i+1)+"_"+var[0])
     for var in template_lepton:
         if var[1] == True:
             inputList.append("DNN__lepton_"+var[0])
