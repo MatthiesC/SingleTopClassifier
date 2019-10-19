@@ -1,0 +1,30 @@
+dict_Classes = {
+    "tW_signal":{
+        "Use":False,
+        "File":"uhh2.AnalysisModuleRunner.MC.ST_tW_signal.root"
+    },
+    "tW_other":{
+        "Use":False,
+        "File":"uhh2.AnalysisModuleRunner.MC.ST_tW_other.root"
+    },
+    "TTbar":{
+        "Use":False,
+        "File":"uhh2.AnalysisModuleRunner.MC.TTbar.root"
+    },
+    "WJets":{
+        "Use":False,
+        "File":"uhh2.AnalysisModuleRunner.MC.WJets.root"
+    },
+    "DYJets":{
+        "Use":False,
+        "File":"uhh2.AnalysisModuleRunner.MC.DYJets.root"
+    },
+    "Diboson":{
+        "Use":False,
+        "File":"uhh2.AnalysisModuleRunner.MC.Diboson.root"
+    },
+    "QCD":{
+        "Use":True,
+        "File":"uhh2.AnalysisModuleRunner.MC.QCD.root"
+    }
+}
