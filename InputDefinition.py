@@ -64,8 +64,8 @@ template_hotvr = [
     ["tau32",True]
 ]
 template_jet = [
-    ["btagged",True],
-    ["DeepJet",False],
+    ["btagged",False],
+    ["DeepJet",True],
     ["px",False],
     ["py",False],
     ["pz",False],
