@@ -1,6 +1,9 @@
 # Specify which input variables you want to use (True/False)!
 # Specify how many HOTVR and AK4 jets you want to use!
 
+number_of_hotvr_jets = 2
+number_of_ak4_jets = 5
+
 import os, sys
 import numpy as np
 
@@ -97,7 +100,7 @@ template_lepton = [
 ]
 
 
-def compileInputList(n_hotvr, n_jets):
+def compileInputList(n_hotvr=number_of_hotvr_jets, n_jets=number_of_ak4_jets):
 
     """Returns an array of all DNN input variables together with their normalization parameters."""
 

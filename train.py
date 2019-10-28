@@ -11,11 +11,11 @@ from keras.models import Sequential
 from keras.layers import Dense
 
 
-def get_InputVariableNames(n_hotvr=2, n_jets=4):
+def get_InputVariableParameters():
 
     """Compiles a list of the DNN input variables based on InputDefinition."""
 
-    inputList = compileInputList(n_hotvr, n_jets)
+    inputList = compileInputList()
 
     return inputList
 
@@ -72,7 +72,7 @@ def save_NumpyFiles(processName, is_mc, verbose=False, workdir='workdir'):
 
     if verbose: print "Saving numpy files for process:", processName
 
-    inputVariables = get_InputVariableNames()
+    inputVariables = get_InputVariableParameters()
 
     dataFrame = None
     if is_mc:
@@ -112,7 +112,7 @@ def define_KerasModel(inputArray):
 
 def main():
 
-    inputVariables = get_InputVariableNames()
+    inputVariables = get_InputVariableParameters()
     model = define_KerasModel(inputVariables)
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     #model.fit(X, y, epochs=10, batch_size=1024)
@@ -120,7 +120,7 @@ def main():
     processes = ['QCD']
 
     for p in processes:
-        save_NumpyFiles(p, True, False)
+        save_NumpyFiles(p, True)
 
 
 if __name__=="__main__":
