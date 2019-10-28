@@ -31,6 +31,16 @@ def read_InputVariables(rootFileName, inputArray, treeName='AnalysisTree'):
     return dataFrame
 
 
+def read_EventWeights(rootFileName, treeName='AnalysisTree'):
+
+    """Reads the event weights from a given ROOT file and translates it into numpy format. Be careful that it is read in the same order as the input variables."""
+
+    weightsName = 'DNN_EventWeight'
+    numpyArray = root2array(rootFileName, treename=treeName, branches=weightsName)
+
+    return numpyArray
+
+
 def normalize_InputVectorEntries(numpyInput, inputParameters):
 
     """Takes the input vector in numpy format and returns a new array with normalized input variables based on normalization parameters."""
@@ -54,6 +64,40 @@ def create_Path(path):
         print "Created path '%s'" % (path)
 
 
+def save_NumpyFiles(processName, is_mc, verbose=False, workdir='workdir'):
+
+    """Save input vectors and event weights as numpy files in workdir. Specify process name (TTbar, WJets, etc.) as in SampleClasses.py"""
+
+    create_Path(workdir)
+
+    if verbose: print "Saving numpy files for process:", processName
+
+    inputVariables = get_InputVariableNames()
+
+    dataFrame = None
+    if is_mc:
+        dataFrame = read_InputVariables(fileNamePrefix_MC+dict_Classes[processName]['File'], inputVariables)
+    else:
+        dataFrame = read_InputVariables(fileNamePrefix_DATA+dict_Classes[processName]['File'], inputVariables)
+
+    path = workdir+'/'+processName+'.npy'
+    np.save(path, dataFrame)
+    loaded_input = np.load(path)
+    if verbose: print "Input vector:"
+    if verbose: print loaded_input
+    norm_input = normalize_InputVectorEntries(loaded_input, inputVariables)
+    path = workdir+'/'+processName+'_norm.npy'
+    np.save(path, norm_input)
+    if verbose: print 'Normalized input vector:'
+    if verbose: print norm_input
+    if is_mc:
+        weights = read_EventWeights(fileNamePrefix_MC+dict_Classes['QCD']['File'])
+        if verbose: print 'Event weight vector:'
+        if verbose: print weights
+        path = workdir+'/'+processName+'_weights.npy'
+        np.save(path, weights)
+
+
 def define_KerasModel(inputArray):
 
     """Defines the DNN model."""
@@ -73,16 +117,10 @@ def main():
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     #model.fit(X, y, epochs=10, batch_size=1024)
 
-    dataFrame = read_InputVariables(fileNamePrefix_MC+dict_Classes['QCD']['File'], inputVariables)
-    create_Path('workdir')
-    np.save('workdir/QCD.npy', dataFrame)
-    loaded_input = np.load('workdir/QCD.npy')
-    print "Input vector:"
-    print loaded_input
-    norm_input = normalize_InputVectorEntries(loaded_input, inputVariables)
-    np.save('workdir/QCD_norm.npy', norm_input)
-    print "Normalized input vector:"
-    print norm_input
+    processes = ['QCD']
+
+    for p in processes:
+        save_NumpyFiles(p, True, False)
 
 
 if __name__=="__main__":
