@@ -7,9 +7,6 @@ from root_numpy import root2array
 import numpy as np
 import pandas
 
-from keras.models import Sequential
-from keras.layers import Dense
-
 
 def get_InputVariableParameters():
 
@@ -99,26 +96,9 @@ def save_NumpyFiles(processName, is_mc, verbose=False, workdir='workdir'):
         np.save(path, weights)
 
 
-def define_KerasModel(inputArray):
-
-    """Defines the DNN model."""
-
-    model = Sequential()
-    model.add(Dense(512, input_dim=len(inputArray), activation='relu'))
-    model.add(Dense(512, activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))
-
-    return model
-
-
 def setup_Inputs():
 
     """Main function of this script. Converts UHH2 ntuples into numpy format, including normalizing the input variables and also saving event weights into separate numpy files."""
-
-    #inputVariables = get_InputVariableParameters()
-    #model = define_KerasModel(inputVariables)
-    #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-    #model.fit(X, y, epochs=10, batch_size=1024)
 
     processes = []
     for proc in dict_Classes.keys():
