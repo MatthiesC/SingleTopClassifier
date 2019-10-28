@@ -5,8 +5,8 @@ A DNN for the highly boosted tW measurement using Keras/TensorFlow.
 
 ## Preliminaries
 
-* Store UHH2 input ntuples into `samples` directory.
-* A `workdir` directory will be created automatically if not existing. It will contain `.npy` files etc.
+* Store UHH2 input ntuples into `samples` directory. This done by `source ReceiveNtuples.sh`.
+* Do `python GetInputs.py'. `A `workdir` directory will be created automatically if not existing. It will contain `.npy` files etc.
 
 
 ## DNN configuration
