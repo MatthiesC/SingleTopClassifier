@@ -70,7 +70,7 @@ def save_NumpyFiles(processName, is_mc, verbose=False, workdir='workdir'):
 
     create_Path(workdir)
 
-    if verbose: print "Saving numpy files for process:", processName
+    print "Saving numpy files for process:", processName
 
     inputVariables = get_InputVariableParameters()
 
@@ -83,6 +83,7 @@ def save_NumpyFiles(processName, is_mc, verbose=False, workdir='workdir'):
     path = workdir+'/'+processName+'.npy'
     np.save(path, dataFrame)
     loaded_input = np.load(path)
+    print "Number of events:", len(loaded_input)
     if verbose: print "Input vector:"
     if verbose: print loaded_input
     norm_input = normalize_InputVectorEntries(loaded_input, inputVariables)
@@ -110,14 +111,20 @@ def define_KerasModel(inputArray):
     return model
 
 
-def main():
+def setup_Inputs():
 
-    inputVariables = get_InputVariableParameters()
-    model = define_KerasModel(inputVariables)
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    """Main function of this script. Converts UHH2 ntuples into numpy format, including normalizing the input variables and also saving event weights into separate numpy files."""
+
+    #inputVariables = get_InputVariableParameters()
+    #model = define_KerasModel(inputVariables)
+    #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     #model.fit(X, y, epochs=10, batch_size=1024)
 
-    processes = ['QCD']
+    processes = []
+    for proc in dict_Classes.keys():
+        if dict_Classes[proc]["Use"] == True:
+            processes.append(proc)
+    print "Working on theses processes:",processes
 
     for p in processes:
         save_NumpyFiles(p, True)
@@ -125,4 +132,4 @@ def main():
 
 if __name__=="__main__":
 
-    main()
+    setup_Inputs()
