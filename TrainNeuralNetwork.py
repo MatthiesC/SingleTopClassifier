@@ -5,15 +5,11 @@ import sys
 import numpy as np
 import pandas as pd
 
-#from keras.wrappers.scikit_learn import KerasClassifier
 from keras.utils import np_utils
 from keras.models import Sequential
 from keras.layers import Dense
 
 from sklearn.preprocessing import LabelEncoder
-#from sklearn.model_selection import KFold
-#from sklearn.model_selection import cross_val_score
-#from sklearn.pipeline import Pipeline
 
 
 
@@ -27,8 +23,6 @@ usedClasses = []
 for key in dict_Classes.keys():
     if dict_Classes[key]["Use"] == True:
         usedClasses.append(key)
-
-#usedClasses = ['TTbar', 'WJets', 'DYJets', 'tW_signal', 'tW_other']
 
 print "Using these physical processes as classes of multi-class DNN:",usedClasses
 
@@ -133,10 +127,8 @@ def define_NetworkArchitecture(used_classes):
     """Define the NN architecture."""
 
     model = Sequential()
-    model.add(Dense(512, input_dim=len(inputVariableNames), activation='relu'))
-    model.add(Dense(512, activation='relu'))
-    model.add(Dense(512, activation='relu'))
-    model.add(Dense(512, activation='relu'))
+    model.add(Dense(256, input_dim=len(inputVariableNames), activation='relu'))
+    model.add(Dense(256, activation='relu'))
     model.add(Dense(len(used_classes), activation='softmax'))
 
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -148,7 +140,7 @@ def train_NN():
 
     """Do the actual training of your NN."""
 
-    # split all datasets into training, test, and validation samples
+    # split all datasets into training, test, and validation samples!
     for u_cl in usedClasses:
         split_TrainTestValidation(u_cl, 0.6, 0.2, 0.2)
 
@@ -159,16 +151,7 @@ def train_NN():
 
     # train!
     model = define_NetworkArchitecture(usedClasses)
-    model.fit(data_train["values"], data_train["encodedLabels"], epochs=100, batch_size=1000, shuffle=True)
-
-    
-
-
-
-    #estimator = KerasClassifier(build_fn=define_Model, epochs=20, batch_size=10000)
-    #kfold = KFold(n_splits=10, shuffle=True)
-    #results = cross_val_score(estimator, training_data_X, dummy_y, cv=kfold)
-    #print("Baseline: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
+    model.fit(data_train['values'], data_train['encodedLabels'], epochs=100, batch_size=1000, shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels']))
 
 
 if __name__ == '__main__':
