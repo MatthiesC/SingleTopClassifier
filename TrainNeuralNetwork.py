@@ -103,7 +103,32 @@ def prepare_Dataset(used_classes, sample_type, inputSuffix='_norm', workdirName=
     return completeDataFrame
 
 
-def define_NetworkArchitecture():
+def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm', workdirName='workdir'): # sample_type = 'train', 'test', or 'validation'
+
+    """Returns a dictionary containing data values, string labels, and encoded labels which can directly be used with the model.fit() function of Keras."""
+
+    # In the following, do everything as described here:
+    # https://machinelearningmastery.com/multi-class-classification-tutorial-keras-deep-learning-library/
+
+    # load dataset
+    data = prepare_Dataset(used_classes, sample_type, inputSuffix, workdirName).values
+    data_values = data[:,0:-1] # input vectors for NN
+    data_labels = data[:,-1] # classes associated to each event, given in string format
+    
+    # encode class values as integers
+    encoder = LabelEncoder()
+    encoder.fit(data_labels)
+    encoded_data_labels = encoder.transform(data_labels)
+
+    # convert integers to dummy values (i.e. one hot encoded)
+    data_encodedLabels = np_utils.to_categorical(encoded_data_labels)
+
+    result = {"values": data_values, "labels": data_labels, "encodedLabels": data_encodedLabels}
+
+    return result
+
+
+def define_NetworkArchitecture(used_classes):
 
     """Define the NN architecture."""
 
@@ -112,7 +137,7 @@ def define_NetworkArchitecture():
     model.add(Dense(512, activation='relu'))
     model.add(Dense(512, activation='relu'))
     model.add(Dense(512, activation='relu'))
-    model.add(Dense(len(usedClasses), activation='softmax'))
+    model.add(Dense(len(used_classes), activation='softmax'))
 
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
@@ -127,27 +152,16 @@ def train_NN():
     for u_cl in usedClasses:
         split_TrainTestValidation(u_cl, 0.6, 0.2, 0.2)
 
-    # In the following, do everything as described here:
-    # https://machinelearningmastery.com/multi-class-classification-tutorial-keras-deep-learning-library/
-
-    # load training dataset
-    training_data = prepare_Dataset(usedClasses, 'train').values
-    training_data__values = training_data[:,0:-1] # input vectors for NN
-    training_data__labels = training_data[:,-1] # classes associated to each event, given in string format
-
-    # encode class values as integers
-    encoder = LabelEncoder()
-    encoder.fit(training_data__labels)
-    encoded_training_data__labels = encoder.transform(training_data__labels)
-
-    # convert integers to dummy variables (i.e. one hot encoded)
-    training_data__encodedLabels = np_utils.to_categorical(encoded_training_data__labels)
+    # get data for Keras usage!
+    data_train = make_DatasetUsableWithKeras(usedClasses, 'train')
+    data_test = make_DatasetUsableWithKeras(usedClasses, 'test')
+    data_validation = make_DatasetUsableWithKeras(usedClasses, 'validation')
 
     # train!
-    model = define_NetworkArchitecture()
-    model.fit(training_data__values, training_data__encodedLabels, epochs=100, batch_size=1000)
+    model = define_NetworkArchitecture(usedClasses)
+    model.fit(data_train["values"], data_train["encodedLabels"], epochs=100, batch_size=1000, shuffle=True)
 
-
+    
 
 
 
