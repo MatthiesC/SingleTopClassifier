@@ -5,8 +5,15 @@ import sys
 import numpy as np
 import pandas as pd
 
+#from keras.wrappers.scikit_learn import KerasClassifier
+from keras.utils import np_utils
 from keras.models import Sequential
 from keras.layers import Dense
+
+from sklearn.preprocessing import LabelEncoder
+#from sklearn.model_selection import KFold
+#from sklearn.model_selection import cross_val_score
+#from sklearn.pipeline import Pipeline
 
 
 
@@ -20,7 +27,12 @@ usedClasses = []
 for key in dict_Classes.keys():
     if dict_Classes[key]["Use"] == True:
         usedClasses.append(key)
+
+#usedClasses = ['TTbar', 'WJets', 'DYJets', 'tW_signal', 'tW_other']
+
 print "Using these physical processes as classes of multi-class DNN:",usedClasses
+
+### end of global stuff
 
 
 
@@ -91,12 +103,14 @@ def prepare_Dataset(used_classes, sample_type, inputSuffix='_norm', workdirName=
     return completeDataFrame
 
 
-def define_Model():
+def define_NetworkArchitecture():
 
     """Define the NN architecture."""
 
     model = Sequential()
     model.add(Dense(512, input_dim=len(inputVariableNames), activation='relu'))
+    model.add(Dense(512, activation='relu'))
+    model.add(Dense(512, activation='relu'))
     model.add(Dense(512, activation='relu'))
     model.add(Dense(len(usedClasses), activation='softmax'))
 
@@ -109,15 +123,41 @@ def train_NN():
 
     """Do the actual training of your NN."""
 
-    model = define_Model()
-    #model.fit(X, y, epochs=10, batch_size=1024)
+    # split all datasets into training, test, and validation samples
+    for u_cl in usedClasses:
+        split_TrainTestValidation(u_cl, 0.6, 0.2, 0.2)
+
+    # In the following, do everything as described here:
+    # https://machinelearningmastery.com/multi-class-classification-tutorial-keras-deep-learning-library/
+
+    # load training dataset
+    training_data = prepare_Dataset(usedClasses, 'train').values
+    training_data__values = training_data[:,0:-1] # input vectors for NN
+    training_data__labels = training_data[:,-1] # classes associated to each event, given in string format
+
+    # encode class values as integers
+    encoder = LabelEncoder()
+    encoder.fit(training_data__labels)
+    encoded_training_data__labels = encoder.transform(training_data__labels)
+
+    # convert integers to dummy variables (i.e. one hot encoded)
+    training_data__encodedLabels = np_utils.to_categorical(encoded_training_data__labels)
+
+    # train!
+    model = define_NetworkArchitecture()
+    model.fit(training_data__values, training_data__encodedLabels, epochs=100, batch_size=1000)
+
+
+
+
+
+    #estimator = KerasClassifier(build_fn=define_Model, epochs=20, batch_size=10000)
+    #kfold = KFold(n_splits=10, shuffle=True)
+    #results = cross_val_score(estimator, training_data_X, dummy_y, cv=kfold)
+    #print("Baseline: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
 
 
 if __name__ == '__main__':
 
-    for c in usedClasses:
-        split_TrainTestValidation(c, 0.6, 0.2, 0.2)
-
-    print prepare_Dataset(usedClasses, 'train')
-
+    train_NN()
     print "Done."
