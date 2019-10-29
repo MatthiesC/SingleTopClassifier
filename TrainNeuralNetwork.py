@@ -3,15 +3,26 @@ from config.SampleClasses import *
 
 import sys
 import numpy as np
+import pandas as pd
 
 from keras.models import Sequential
 from keras.layers import Dense
 
 
+
+
 ### global variables
 
 inputVariableNames = (compileInputList())[:,0]
-#print inputVariableNames
+print "Using these input variables:",inputVariableNames
+
+usedClasses = []
+for key in dict_Classes.keys():
+    if dict_Classes[key]["Use"] == True:
+        usedClasses.append(key)
+print "Using these physical processes as classes of multi-class DNN:",usedClasses
+
+
 
 
 def load_Numpy(processName, inputSuffix='_norm', workdirName='workdir'):
@@ -62,6 +73,24 @@ def split_TrainTestValidation(processName, percentTrain, percentTest, percentVal
     return fileNames
 
 
+def prepare_Dataset(used_classes, sample_type, inputSuffix='_norm', workdirName='workdir'): # sample_type = 'train', 'test', or 'validation'
+
+    """Returns a gigantic pandas dataframe, containing all events to be trained/tested/validated on."""
+
+    listOfDataFrames = []
+
+    for u_cl in used_classes:
+        fileName = './'+workdirName+'/'+u_cl+inputSuffix+'_'+sample_type+'.npy'
+        dataArray = np.load(fileName)
+        dataFrame = pd.DataFrame(data=dataArray, columns=inputVariableNames)
+        dataFrame['Class'] = u_cl
+        listOfDataFrames.append(dataFrame)
+
+    completeDataFrame = pd.concat(listOfDataFrames, ignore_index=True, sort=False)
+
+    return completeDataFrame
+
+
 def define_Model():
 
     """Define the NN architecture."""
@@ -69,7 +98,9 @@ def define_Model():
     model = Sequential()
     model.add(Dense(512, input_dim=len(inputVariableNames), activation='relu'))
     model.add(Dense(512, activation='relu'))
-    model.add(Dense(1, activation='sigmoid'))
+    model.add(Dense(len(usedClasses), activation='softmax'))
+
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     return model
 
@@ -79,10 +110,14 @@ def train_NN():
     """Do the actual training of your NN."""
 
     model = define_Model()
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     #model.fit(X, y, epochs=10, batch_size=1024)
 
 
 if __name__ == '__main__':
 
-    split_TrainTestValidation('QCD', 0.6, 0.2, 0.2)
+    for c in usedClasses:
+        split_TrainTestValidation(c, 0.6, 0.2, 0.2)
+
+    print prepare_Dataset(usedClasses, 'train')
+
+    print "Done."
