@@ -89,7 +89,7 @@ def save_NumpyFiles(processName, is_mc, verbose=False, workdir='workdir'):
     if verbose: print 'Normalized input vector:'
     if verbose: print norm_input
     if is_mc:
-        weights = read_EventWeights(fileNamePrefix_MC+dict_Classes['QCD']['File'])
+        weights = read_EventWeights(fileNamePrefix_MC+dict_Classes[processName]['File'])
         if verbose: print 'Event weight vector:'
         if verbose: print weights
         path = workdir+'/'+processName+'_weights.npy'
