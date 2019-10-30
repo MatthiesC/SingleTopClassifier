@@ -7,7 +7,7 @@ import pandas as pd
 
 from keras.utils import np_utils
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, BatchNormalization
 
 from sklearn.preprocessing import LabelEncoder
 
@@ -128,7 +128,9 @@ def define_NetworkArchitecture(used_classes):
 
     model = Sequential()
     model.add(Dense(256, input_dim=len(inputVariableNames), activation='relu'))
+    model.add(BatchNormalization())
     model.add(Dense(256, activation='relu'))
+    model.add(BatchNormalization())
     model.add(Dense(len(used_classes), activation='softmax'))
 
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
