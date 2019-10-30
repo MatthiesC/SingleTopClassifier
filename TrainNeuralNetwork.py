@@ -86,10 +86,17 @@ def prepare_Dataset(used_classes, sample_type, inputSuffix='_norm', workdirName=
     listOfDataFrames = []
 
     for u_cl in used_classes:
+
         fileName = './'+workdirName+'/'+u_cl+inputSuffix+'_'+sample_type+'.npy'
         dataArray = np.load(fileName)
         dataFrame = pd.DataFrame(data=dataArray, columns=inputVariableNames)
+
+        fileNameWeights = './'+workdirName+'/'+u_cl+'_weights_'+sample_type+'.npy'
+        weightsArray = np.load(fileNameWeights)
+        dataFrame['EventWeight'] = weightsArray
+
         dataFrame['Class'] = u_cl
+
         listOfDataFrames.append(dataFrame)
 
     completeDataFrame = pd.concat(listOfDataFrames, ignore_index=True, sort=False)
@@ -106,9 +113,10 @@ def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm', 
 
     # load dataset
     data = prepare_Dataset(used_classes, sample_type, inputSuffix, workdirName).values
-    data_values = data[:,0:-1] # input vectors for NN
+    data_values = data[:,0:-2] # input vectors for NN
     data_labels = data[:,-1] # classes associated to each event, given in string format
-    
+    data_weights = data[:,-2] # event weights
+
     # encode class values as integers
     encoder = LabelEncoder()
     encoder.fit(data_labels)
@@ -117,7 +125,7 @@ def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm', 
     # convert integers to dummy values (i.e. one hot encoded)
     data_encodedLabels = np_utils.to_categorical(encoded_data_labels)
 
-    result = {"values": data_values, "labels": data_labels, "encodedLabels": data_encodedLabels}
+    result = {"values": data_values, "labels": data_labels, "encodedLabels": data_encodedLabels, "weights": data_weights}
 
     return result
 
@@ -126,11 +134,15 @@ def define_NetworkArchitecture(used_classes):
 
     """Define the NN architecture."""
 
+    layers = [256,256]
+
     model = Sequential()
-    model.add(Dense(256, input_dim=len(inputVariableNames), activation='relu'))
+    model.add(Dense(layers[0], input_dim=len(inputVariableNames), activation='relu'))
     model.add(BatchNormalization())
-    model.add(Dense(256, activation='relu'))
-    model.add(BatchNormalization())
+    for i in range(len(layers)):
+        if i == 0: continue
+        model.add(Dense(layers[i], activation='relu'))
+        model.add(BatchNormalization())
     model.add(Dense(len(used_classes), activation='softmax'))
 
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -145,6 +157,7 @@ def train_NN():
     # split all datasets into training, test, and validation samples!
     for u_cl in usedClasses:
         split_TrainTestValidation(u_cl, 0.6, 0.2, 0.2)
+        split_TrainTestValidation(u_cl, 0.6, 0.2, 0.2, '_weights')
 
     # get data for Keras usage!
     data_train = make_DatasetUsableWithKeras(usedClasses, 'train')
@@ -153,7 +166,7 @@ def train_NN():
 
     # train!
     model = define_NetworkArchitecture(usedClasses)
-    model.fit(data_train['values'], data_train['encodedLabels'], epochs=100, batch_size=1000, shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels']))
+    model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=100, batch_size=1000, shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']))
 
 
 if __name__ == '__main__':
