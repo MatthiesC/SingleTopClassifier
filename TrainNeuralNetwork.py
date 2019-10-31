@@ -154,6 +154,8 @@ def define_NetworkArchitecture(used_classes):
 
     model.compile(loss='categorical_crossentropy', optimizer=my_optimizer, metrics=my_metrics)
 
+    print model.summary()
+
     return model
 
 
