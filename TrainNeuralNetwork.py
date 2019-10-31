@@ -10,6 +10,7 @@ from keras.models import Sequential
 from keras.layers import Dense, BatchNormalization, Dropout
 from keras import optimizers
 from keras import metrics
+from CustomCallback import AdditionalValidationSets
 
 from sklearn.preprocessing import LabelEncoder
 
@@ -154,6 +155,7 @@ def define_NetworkArchitecture(used_classes):
 
     model.compile(loss='categorical_crossentropy', optimizer=my_optimizer, metrics=my_metrics)
 
+    print "Neural network architecture SUMMARY:"
     print model.summary()
 
     return model
@@ -173,9 +175,16 @@ def train_NN(parameters):
     data_test = make_DatasetUsableWithKeras(usedClasses, 'test')
     data_validation = make_DatasetUsableWithKeras(usedClasses, 'validation')
 
+    # initialize your own custom history callback in which training set and validation set are evaluated after each epoch in the same way!
+    customHistory = AdditionalValidationSets([
+        (data_train['values'], data_train['encodedLabels'], data_train['weights'], 'train'),
+        (data_validation['values'], data_validation['encodedLabels'], data_validation['weights'], 'valid')
+    ])
+
     # train!
     model = define_NetworkArchitecture(usedClasses)
-    model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=100, batch_size=65536, shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']))
+    history = model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=5, batch_size=65536, shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']), callbacks=[customHistory])
+    print history
 
 
 if __name__ == '__main__':
