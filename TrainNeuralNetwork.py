@@ -7,7 +7,9 @@ import pandas as pd
 
 from keras.utils import np_utils
 from keras.models import Sequential
-from keras.layers import Dense, BatchNormalization
+from keras.layers import Dense, BatchNormalization, Dropout
+from keras import optimizers
+from keras import metrics
 
 from sklearn.preprocessing import LabelEncoder
 
@@ -138,19 +140,24 @@ def define_NetworkArchitecture(used_classes):
 
     model = Sequential()
     model.add(Dense(layers[0], input_dim=len(inputVariableNames), activation='relu'))
-    model.add(BatchNormalization())
+    #model.add(BatchNormalization())
+    model.add(Dropout(0.6))
     for i in range(len(layers)):
         if i == 0: continue
         model.add(Dense(layers[i], activation='relu'))
-        model.add(BatchNormalization())
+        #model.add(BatchNormalization())
+        model.add(Dropout(0.6))
     model.add(Dense(len(used_classes), activation='softmax'))
 
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    my_optimizer = optimizers.Adam(lr=0.001)
+    my_metrics = [metrics.categorical_accuracy]
+
+    model.compile(loss='categorical_crossentropy', optimizer=my_optimizer, metrics=my_metrics)
 
     return model
 
 
-def train_NN():
+def train_NN(parameters):
 
     """Do the actual training of your NN."""
 
@@ -166,10 +173,10 @@ def train_NN():
 
     # train!
     model = define_NetworkArchitecture(usedClasses)
-    model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=100, batch_size=1000, shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']))
+    model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=100, batch_size=65536, shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']))
 
 
 if __name__ == '__main__':
 
-    train_NN()
+    train_NN(None)
     print "Done."
