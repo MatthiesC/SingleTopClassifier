@@ -104,8 +104,8 @@ def compileInputList(n_hotvr=number_of_hotvr_jets, n_jets=number_of_ak4_jets):
 
     """Returns an array of all DNN input variables together with their normalization parameters."""
 
-    print "Number of HOTVR jets considered for input vector:  "+str(n_hotvr)
-    print "Number of AK4   jets considered for input vector:  "+str(n_jets)
+    print("Number of HOTVR jets considered for input vector:  "+str(n_hotvr))
+    print("Number of AK4   jets considered for input vector:  "+str(n_jets))
     n_hotvr = int(n_hotvr)
     n_jets = int(n_jets)
     inputList = []
@@ -123,18 +123,18 @@ def compileInputList(n_hotvr=number_of_hotvr_jets, n_jets=number_of_ak4_jets):
     for var in template_lepton:
         if var[-1] == True:
             inputList.append(["DNN__lepton_"+var[0], float(var[1]), 1/float(var[2]-var[1])])
-    print "Length of input vector:                            "+str(len(inputList))
+    print("Length of input vector:                            "+str(len(inputList)))
     return np.array(inputList)
 
 
 def main(n_hotvr, n_jets):
-    print compileInputList(n_hotvr, n_jets)
+    print(compileInputList(n_hotvr, n_jets))
 
 
 if __name__=="__main__":
     if len(sys.argv) < 3:
-        print "Usage:\n" \
+        print("Usage:\n" \
             "    %s <number of hotvr jets> <number of small jets>\n" \
-            % os.path.basename(sys.argv[0])
+            % os.path.basename(sys.argv[0]))
         sys.exit(1)
     main(sys.argv[1], sys.argv[2])

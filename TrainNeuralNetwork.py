@@ -20,14 +20,14 @@ from sklearn.preprocessing import LabelEncoder
 ### global variables
 
 inputVariableNames = (compileInputList())[:,0]
-print "Using these input variables:",inputVariableNames
+print("Using these input variables:", inputVariableNames)
 
 usedClasses = []
 for key in dict_Classes.keys():
     if dict_Classes[key]["Use"] == True:
         usedClasses.append(key)
 
-print "Using these physical processes as classes of multi-class DNN:",usedClasses
+print("Using these physical processes as classes of multi-class DNN:", usedClasses)
 
 ### end of global stuff
 
@@ -48,18 +48,18 @@ def split_TrainTestValidation(processName, percentTrain, percentTest, percentVal
 
     if percentTrain+percentTest+percentValidation > 1: sys.exit("Sum of percentages for training, test, and validation samples is greater than 1. Exit.")
 
-    print "Load numpy file for process:",processName
+    print("Load numpy file for process:", processName)
 
     loaded_numpy = load_Numpy(processName, inputSuffix, workdirName)
     cardinality = len(loaded_numpy)
 
-    print "Cardinality:",cardinality
+    print("Cardinality:", cardinality)
 
     absoluteTrain = int(cardinality*percentTrain)
     absoluteTest = int(cardinality*percentTest)
     absoluteValidation = int(cardinality*percentValidation)
     
-    print "Will split set into train/test/valdiation samples of sizes:",absoluteTrain,absoluteTest,absoluteValidation
+    print("Will split set into train/test/valdiation samples of sizes:", absoluteTrain, absoluteTest, absoluteValidation)
 
     numpyTrain = loaded_numpy[0:absoluteTrain]
     numpyTest = loaded_numpy[absoluteTrain:absoluteTrain+absoluteTest]
@@ -71,13 +71,13 @@ def split_TrainTestValidation(processName, percentTrain, percentTest, percentVal
 
     fileNames = [fileNameTrain, fileNameTest, fileNameValidation]
 
-    print "Saving numpy files..."
+    print("Saving numpy files...")
 
     np.save(fileNameTrain, numpyTrain)
     np.save(fileNameTest, numpyTest)
     np.save(fileNameValidation, numpyValidation)
 
-    print "Done saving."
+    print("Done saving.")
 
     return fileNames
 
@@ -155,8 +155,7 @@ def define_NetworkArchitecture(used_classes):
 
     model.compile(loss='categorical_crossentropy', optimizer=my_optimizer, metrics=my_metrics)
 
-    print "Neural network architecture SUMMARY:"
-    print model.summary()
+    print("Neural network architecture SUMMARY:\n", model.summary())
 
     return model
 
@@ -184,10 +183,10 @@ def train_NN(parameters):
     # train!
     model = define_NetworkArchitecture(usedClasses)
     history = model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=5, batch_size=65536, shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']), callbacks=[customHistory])
-    print history
+    print(history.history)
 
 
 if __name__ == '__main__':
 
     train_NN(None)
-    print "Done."
+    print("Done.")

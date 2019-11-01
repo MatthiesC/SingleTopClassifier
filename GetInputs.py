@@ -3,7 +3,7 @@ import os
 from config.InputDefinition import compileInputList
 from config.SampleClasses import dict_Classes, fileNamePrefix_MC, fileNamePrefix_DATA
 
-from root_numpy import root2array
+import ROOT
 import numpy as np
 import pandas
 
@@ -22,8 +22,10 @@ def read_InputVariables(rootFileName, inputArray, treeName='AnalysisTree'):
     """Reads all DNN input variables from a given ROOT file and translates the input into DataFrame format."""
 
     inputNames = inputArray[:,0] # get only the string names
-    numpyArray = root2array(rootFileName, treename=treeName, branches=inputNames)
-    dataFrame = pandas.DataFrame(numpyArray)
+    rootFile = ROOT.TFile(rootFileName)
+    rootTree = rootFile.Get(treeName)
+    numpyArray = rootTree.AsMatrix(columns=inputNames.tolist())
+    dataFrame = pandas.DataFrame(numpyArray.astype(float))
 
     return dataFrame
 
@@ -33,9 +35,11 @@ def read_EventWeights(rootFileName, treeName='AnalysisTree'):
     """Reads the event weights from a given ROOT file and translates it into numpy format. Be careful that it is read in the same order as the input variables."""
 
     weightsName = 'DNN_EventWeight'
-    numpyArray = root2array(rootFileName, treename=treeName, branches=weightsName)
+    rootFile = ROOT.TFile(rootFileName)
+    rootTree = rootFile.Get(treeName)
+    numpyArray = rootTree.AsMatrix(columns=[weightsName])
 
-    return numpyArray
+    return numpyArray.astype(float)
 
 
 def normalize_InputVectorEntries(numpyInput, inputParameters):
@@ -55,10 +59,10 @@ def create_Path(path):
     """Creates path given via argument. Useful to create workdir if not yet existing."""
 
     if os.path.isdir(path):
-        print "The path '%s' already exists, not creating it." % (path)
+        print("The path '%s' already exists, not creating it." % (path))
     else:
         os.makedirs(path)
-        print "Created path '%s'" % (path)
+        print("Created path '%s'" % (path))
 
 
 def save_NumpyFiles(processName, is_mc, verbose=False, workdir='workdir'):
@@ -67,7 +71,7 @@ def save_NumpyFiles(processName, is_mc, verbose=False, workdir='workdir'):
 
     create_Path(workdir)
 
-    print "Saving numpy files for process:", processName
+    print("Saving numpy files for process:", processName)
 
     inputVariables = get_InputVariableParameters()
 
@@ -80,18 +84,15 @@ def save_NumpyFiles(processName, is_mc, verbose=False, workdir='workdir'):
     path = workdir+'/'+processName+'.npy'
     np.save(path, dataFrame)
     loaded_input = np.load(path)
-    print "Number of events:", len(loaded_input)
-    if verbose: print "Input vector:"
-    if verbose: print loaded_input
+    print("Number of events:", len(loaded_input))
+    if verbose: print("Input vector:\n", loaded_input)
     norm_input = normalize_InputVectorEntries(loaded_input, inputVariables)
     path = workdir+'/'+processName+'_norm.npy'
     np.save(path, norm_input)
-    if verbose: print 'Normalized input vector:'
-    if verbose: print norm_input
+    if verbose: print("Normalized input vector:", norm_input)
     if is_mc:
         weights = read_EventWeights(fileNamePrefix_MC+dict_Classes[processName]['File'])
-        if verbose: print 'Event weight vector:'
-        if verbose: print weights
+        if verbose: print("Event weight vector:", weights)
         path = workdir+'/'+processName+'_weights.npy'
         np.save(path, weights)
 
@@ -104,7 +105,7 @@ def setup_Inputs():
     for proc in dict_Classes.keys():
         if dict_Classes[proc]["Use"] == True:
             processes.append(proc)
-    print "Working on theses processes:",processes
+    print("Working on theses processes:", processes)
 
     for p in processes:
         save_NumpyFiles(p, True)
