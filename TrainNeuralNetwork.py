@@ -133,24 +133,24 @@ def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm', 
     return result
 
 
-def define_NetworkArchitecture(used_classes):
+def define_NetworkArchitecture(parameters):
 
     """Define the NN architecture."""
 
-    layers = [256,256]
+    layers = parameters['layers']
 
     model = Sequential()
     model.add(Dense(layers[0], input_dim=len(inputVariableNames), activation='relu'))
     #model.add(BatchNormalization())
-    model.add(Dropout(0.6))
+    if parameters['dropout']: model.add(Dropout(parameters['dropout_rate']))
     for i in range(len(layers)):
         if i == 0: continue
         model.add(Dense(layers[i], activation='relu'))
         #model.add(BatchNormalization())
-        model.add(Dropout(0.6))
-    model.add(Dense(len(used_classes), activation='softmax'))
+        if parameters['dropout']: model.add(Dropout(parameters['dropout_rate']))
+    model.add(Dense(len(parameters['usedClasses']), activation='softmax'))
 
-    my_optimizer = optimizers.Adam(lr=0.001)
+    my_optimizer = optimizers.Adam(lr=parameters['learning_rate'])
     my_metrics = [metrics.categorical_accuracy]
 
     model.compile(loss='categorical_crossentropy', optimizer=my_optimizer, metrics=my_metrics)
@@ -165,14 +165,14 @@ def train_NN(parameters):
     """Do the actual training of your NN."""
 
     # split all datasets into training, test, and validation samples!
-    for u_cl in usedClasses:
+    for u_cl in parameters['usedClasses']:
         split_TrainTestValidation(u_cl, 0.6, 0.2, 0.2)
         split_TrainTestValidation(u_cl, 0.6, 0.2, 0.2, '_weights')
 
     # get data for Keras usage!
-    data_train = make_DatasetUsableWithKeras(usedClasses, 'train')
-    data_test = make_DatasetUsableWithKeras(usedClasses, 'test')
-    data_validation = make_DatasetUsableWithKeras(usedClasses, 'validation')
+    data_train = make_DatasetUsableWithKeras(parameters['usedClasses'], 'train')
+    data_test = make_DatasetUsableWithKeras(parameters['usedClasses'], 'test')
+    data_validation = make_DatasetUsableWithKeras(parameters['usedClasses'], 'validation')
 
     # initialize your own custom history callback in which training set and validation set are evaluated after each epoch in the same way!
     customHistory = AdditionalValidationSets([
@@ -181,12 +181,22 @@ def train_NN(parameters):
     ])
 
     # train!
-    model = define_NetworkArchitecture(usedClasses)
-    history = model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=5, batch_size=65536, shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']), callbacks=[customHistory])
-    print(history.history)
+    model = define_NetworkArchitecture(parameters)
+    history = model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=parameters['epochs'], batch_size=parameters['batch_size'], shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']), callbacks=[customHistory])
+    print("Model history:\n", history.history)
 
 
 if __name__ == '__main__':
 
-    train_NN(None)
+    parameters = {
+        'usedClasses': ['tW_signal', 'tW_other', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
+        'layers': [256, 256],
+        'dropout': True,
+        'dropout_rate': 0.6,
+        'epochs': 5,
+        'batch_size': 65536,
+        'learning_rate': 0.001
+    }
+
+    train_NN(parameters)
     print("Done.")
