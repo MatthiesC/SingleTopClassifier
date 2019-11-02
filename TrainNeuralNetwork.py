@@ -10,6 +10,7 @@ from keras.models import Sequential
 from keras.layers import Dense, BatchNormalization, Dropout
 from keras import optimizers
 from keras import metrics
+from keras import regularizers
 from CustomCallback import AdditionalValidationSets
 
 from sklearn.preprocessing import LabelEncoder
@@ -139,13 +140,19 @@ def define_NetworkArchitecture(parameters):
 
     layers = parameters['layers']
 
+    my_kernel_regularizer = None
+    if parameters['regularizer'] == 'l1':
+        my_kernel_regularizer = regularizers.l1(parameters['regularizer_rate'])
+    elif parameters['regularizer'] == 'l2':
+        my_kernel_regularizer = regularizers.l2(parameters['regularizer_rate'])
+
     model = Sequential()
-    model.add(Dense(layers[0], input_dim=len(inputVariableNames), activation='relu'))
+    model.add(Dense(layers[0], input_dim=len(inputVariableNames), kernel_regularizer=my_kernel_regularizer, activation='relu'))
     #model.add(BatchNormalization())
     if parameters['dropout']: model.add(Dropout(parameters['dropout_rate']))
     for i in range(len(layers)):
         if i == 0: continue
-        model.add(Dense(layers[i], activation='relu'))
+        model.add(Dense(layers[i], activation='relu', kernel_regularizer=my_kernel_regularizer))
         #model.add(BatchNormalization())
         if parameters['dropout']: model.add(Dropout(parameters['dropout_rate']))
     model.add(Dense(len(parameters['usedClasses']), activation='softmax'))
@@ -195,7 +202,9 @@ if __name__ == '__main__':
         'dropout_rate': 0.6,
         'epochs': 5,
         'batch_size': 65536,
-        'learning_rate': 0.001
+        'learning_rate': 0.001,
+        'regularizer': '', # either 'l1' or 'l2'
+        'regularizer_rate': 0.01
     }
 
     train_NN(parameters)
