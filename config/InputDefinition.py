@@ -96,7 +96,7 @@ template_lepton = [
     ["charge",-1,1,True],
     ["dr_jet",0,6,True],
     ["dphi_jet",0,4,True],
-    ["ptrel_jet",0,7000,True]
+    ["ptrel_jet",0,800,True]
 ]
 
 
