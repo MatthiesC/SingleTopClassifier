@@ -3,3 +3,6 @@
 *.root
 *.npy
 *.png
+*.h5
+*.json
+*.pkl

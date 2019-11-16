@@ -4,6 +4,7 @@ from config.SampleClasses import *
 import sys
 import numpy as np
 import pandas as pd
+import pickle
 
 from keras.utils import np_utils
 from keras.models import Sequential
@@ -11,6 +12,7 @@ from keras.layers import Dense, BatchNormalization, Dropout
 from keras import optimizers
 from keras import metrics
 from keras import regularizers
+from keras.callbacks import ModelCheckpoint
 from CustomCallback import AdditionalValidationSets
 
 from sklearn.preprocessing import LabelEncoder
@@ -29,6 +31,8 @@ for key in dict_Classes.keys():
         usedClasses.append(key)
 
 print("Using these physical processes as classes of multi-class DNN:", usedClasses)
+
+outputDir = './output/'
 
 ### end of global stuff
 
@@ -162,6 +166,11 @@ def define_NetworkArchitecture(parameters):
 
     model.compile(loss='categorical_crossentropy', optimizer=my_optimizer, metrics=my_metrics)
 
+    # save network architecture to disk before training begins!
+    architecture = model.to_json()
+    with open(outputDir+'model_arch.json', 'w') as f:
+        f.write(architecture)
+
     print("Neural network architecture SUMMARY:\n", model.summary())
 
     return model
@@ -187,23 +196,36 @@ def train_NN(parameters):
         (data_validation['values'], data_validation['encodedLabels'], data_validation['weights'], 'valid')
     ])
 
+    # initialize checkpointer callback
+    filePathCheckPoints = outputDir+'checkpoints/checkpoint-{epoch:03d}.h5'
+    checkpointer = ModelCheckpoint(filePathCheckPoints, verbose=1, period=10)
+
     # train!
     model = define_NetworkArchitecture(parameters)
-    history = model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=parameters['epochs'], batch_size=parameters['batch_size'], shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']), callbacks=[customHistory])
+    history = model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=parameters['epochs'], batch_size=parameters['batch_size'], shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']), callbacks=[customHistory, checkpointer])
     print("Model history:\n", history.history)
+
+    # save final model to disk!
+    model.save(outputDir+'model.h5')
+    model.save_weights(outputDir+'model_weights.h5')
+    with open(outputDir+'model_history.pkl', 'wb') as f:
+        pickle.dump(history.history, f)
+    with open(outputDir+'model_customHistory.pkl', 'wb') as f:
+        pickle.dump(customHistory.history, f)
+    print("Saved model to disk.")
 
 
 if __name__ == '__main__':
 
     parameters = {
         'usedClasses': ['tW_signal', 'tW_other', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
-        'layers': [256, 256],
+        'layers': [64, 64],
         'dropout': True,
         'dropout_rate': 0.6,
-        'epochs': 5,
+        'epochs': 800,
         'batch_size': 65536,
-        'learning_rate': 0.001,
-        'regularizer': '', # either 'l1' or 'l2'
+        'learning_rate': 0.0001,
+        'regularizer': '', # either 'l1' or 'l2' or just ''
         'regularizer_rate': 0.01
     }
 
