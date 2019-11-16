@@ -18,7 +18,7 @@ from CustomCallback import AdditionalValidationSets
 
 from sklearn.preprocessing import LabelEncoder
 
-
+from datetime import datetime
 
 
 ### global variables
@@ -193,8 +193,8 @@ def train_NN(parameters):
 
     # initialize your own custom history callback in which training set and validation set are evaluated after each epoch in the same way!
     customHistory = AdditionalValidationSets([
-        (data_train['values'], data_train['encodedLabels'], data_train['weights'], 'train'),
-        (data_validation['values'], data_validation['encodedLabels'], data_validation['weights'], 'valid')
+        (data_train['values'], data_train['encodedLabels'], data_train['weights'], 'train')#,
+        #(data_validation['values'], data_validation['encodedLabels'], data_validation['weights'], 'valid')
     ])
 
     # initialize checkpointer callback
