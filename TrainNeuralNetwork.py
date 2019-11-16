@@ -198,7 +198,7 @@ def train_NN(parameters):
 
     # initialize checkpointer callback
     filePathCheckPoints = outputDir+'checkpoints/checkpoint-{epoch:03d}.h5'
-    checkpointer = ModelCheckpoint(filePathCheckPoints, verbose=1, period=10)
+    checkpointer = ModelCheckpoint(filePathCheckPoints, verbose=1, save_weights_only=True, period=10) # lwtnn only supports json+hdf5 format, not hdf5 standalone
 
     # train!
     model = define_NetworkArchitecture(parameters)
