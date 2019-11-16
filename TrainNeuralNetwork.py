@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import pandas as pd
 import pickle
+import json
 
 from keras.utils import np_utils
 from keras.models import Sequential
@@ -215,6 +216,15 @@ def train_NN(parameters):
     print("Saved model to disk.")
 
 
+def dump_ParametersIntoJsonFile(parameters):
+
+    """Saves NN parameters to json file."""
+
+    param_json = json.dumps(parameters)
+    with open(outputDir+'parameters.json', 'w') as f:
+        f.write(param_json)
+
+
 if __name__ == '__main__':
 
     parameters = {
@@ -229,5 +239,6 @@ if __name__ == '__main__':
         'regularizer_rate': 0.01
     }
 
+    dump_ParametersIntoJsonFile(parameters)
     train_NN(parameters)
     print("Done.")
