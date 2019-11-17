@@ -1,6 +1,5 @@
 from config.InputDefinition import compileInputList
 from config.SampleClasses import *
-from GetInputs import create_Path
 
 import os
 import sys
@@ -19,6 +18,7 @@ from keras.callbacks import ModelCheckpoint
 from CustomCallback import AdditionalValidationSets
 
 from sklearn.preprocessing import LabelEncoder
+from sklearn.utils import shuffle
 
 from datetime import datetime
 
@@ -48,7 +48,7 @@ def main():
     os.makedirs(outputDir+'workdir/', exist_ok=True)
 
     parameters = {
-        'usedClasses': ['tW_signal', 'tW_other', 'TTbar', 'WJets', 'DYJets'],
+        'usedClasses': ['tW_signal', 'tW_other', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
         'layers': [16, 16],
         'dropout': True,
@@ -78,7 +78,7 @@ def load_Numpy(processName, inputSuffix='_norm'):
     return np.load(fileName)
 
 
-def split_TrainTestValidation(processName, percentTrain, percentTest, percentValidation, inputSuffix='_norm'):
+def split_TrainTestValidation(processName, percentTrain, percentTest, percentValidation, shuffle_seed, inputSuffix='_norm'):
 
     """Splits a given numpy sample into training, test, and validation numpy files. Returns list of file names of train, test, and validation numpy files."""
 
@@ -96,6 +96,10 @@ def split_TrainTestValidation(processName, percentTrain, percentTest, percentVal
     absoluteValidation = int(cardinality*percentValidation)
     
     print("Will split set into train/test/valdiation samples of sizes:", absoluteTrain, absoluteTest, absoluteValidation)
+
+    # need to shuffle since hadd presumably does not shuffle... (e.g. WJets is ordered by Pt sample bins, TTbar is ordered by Mtt)
+    # shuffle, but with fixed random seed so that inputs and sample weights are not shuffled differently!!! Should do this more elegant and without fixed seed in the future...
+    loaded_numpy = shuffle(loaded_numpy, random_state=shuffle_seed)
 
     numpyTrain = loaded_numpy[0:absoluteTrain]
     numpyTest = loaded_numpy[absoluteTrain:absoluteTrain+absoluteTest]
@@ -213,9 +217,11 @@ def train_NN(parameters):
 
     # split all datasets into training, test, and validation samples!
     splits = parameters['splits']
+    seed = 0 # do this seeding more elegant in the future, see comment in split_TrainTestValidation function definition. However, need to ensure that data and weights use same seed!
     for u_cl in parameters['usedClasses']:
-        split_TrainTestValidation(u_cl, splits['train'], splits['test'], splits['validation'])
-        split_TrainTestValidation(u_cl, splits['train'], splits['test'], splits['validation'], '_weights')
+        split_TrainTestValidation(u_cl, splits['train'], splits['test'], splits['validation'], seed)
+        split_TrainTestValidation(u_cl, splits['train'], splits['test'], splits['validation'], seed, '_weights')
+        seed = seed+1
 
     # get data for Keras usage!
     data_train = make_DatasetUsableWithKeras(parameters['usedClasses'], 'train')
