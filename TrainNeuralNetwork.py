@@ -1,6 +1,8 @@
 from config.InputDefinition import compileInputList
 from config.SampleClasses import *
+from GetInputs import create_Path
 
+import os
 import sys
 import numpy as np
 import pandas as pd
@@ -26,29 +28,57 @@ from datetime import datetime
 inputVariableNames = (compileInputList())[:,0]
 print("Using these input variables:", inputVariableNames)
 
-usedClasses = []
-for key in dict_Classes.keys():
-    if dict_Classes[key]["Use"] == True:
-        usedClasses.append(key)
-
-print("Using these physical processes as classes of multi-class DNN:", usedClasses)
-
-outputDir = './output/'
+# use a time tag to identify trained models later (for details, look up the parameters.json in the output dir)
+timeTag = datetime.now()
+timeTag = timeTag.strftime('%y-%m-%d-%H-%M-%S')
+outputDir = './outputs/dnn_'+timeTag+'/'
+checkpointDir = 'checkpoints' #subfolder of outputDir
 
 ### end of global stuff
 
 
 
 
-def load_Numpy(processName, inputSuffix='_norm', workdirName='workdir'):
+def main():
+
+    """The main function."""
+
+    print("Creating output directory:", outputDir)
+    os.makedirs(outputDir+checkpointDir, exist_ok=True)
+    os.makedirs(outputDir+'workdir/', exist_ok=True)
+
+    parameters = {
+        'usedClasses': ['tW_signal', 'tW_other', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson'],
+        'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
+        'layers': [64, 64],
+        'dropout': True,
+        'dropout_rate': 0.6,
+        'epochs': 5,
+        'batch_size': 65536,
+        'learning_rate': 0.0005, #Adam default: 0.001
+        'regularizer': '', # either 'l1' or 'l2' or just ''
+        'regularizer_rate': 0.01
+    }
+
+    dump_ParametersIntoJsonFile(parameters)
+    train_NN(parameters)
+    print("Done.")
+
+
+
+
+
+
+
+def load_Numpy(processName, inputSuffix='_norm'):
 
     """Loads numpy file from work directory. Needs process name (TTbar, QCD, etc.) and file name suffix (default = '_norm')."""
 
-    fileName = './'+workdirName+'/'+processName+inputSuffix+'.npy'
+    fileName = './workdir/'+processName+inputSuffix+'.npy'
     return np.load(fileName)
 
 
-def split_TrainTestValidation(processName, percentTrain, percentTest, percentValidation, inputSuffix='_norm', workdirName='workdir'):
+def split_TrainTestValidation(processName, percentTrain, percentTest, percentValidation, inputSuffix='_norm'):
 
     """Splits a given numpy sample into training, test, and validation numpy files. Returns list of file names of train, test, and validation numpy files."""
 
@@ -56,7 +86,7 @@ def split_TrainTestValidation(processName, percentTrain, percentTest, percentVal
 
     print("Load numpy file for process:", processName)
 
-    loaded_numpy = load_Numpy(processName, inputSuffix, workdirName)
+    loaded_numpy = load_Numpy(processName, inputSuffix)
     cardinality = len(loaded_numpy)
 
     print("Cardinality:", cardinality)
@@ -71,9 +101,9 @@ def split_TrainTestValidation(processName, percentTrain, percentTest, percentVal
     numpyTest = loaded_numpy[absoluteTrain:absoluteTrain+absoluteTest]
     numpyValidation = loaded_numpy[absoluteTrain+absoluteTest:absoluteTrain+absoluteTest+absoluteValidation]
     
-    fileNameTrain = './'+workdirName+'/'+processName+inputSuffix+'_train.npy'
-    fileNameTest = './'+workdirName+'/'+processName+inputSuffix+'_test.npy'
-    fileNameValidation = './'+workdirName+'/'+processName+inputSuffix+'_validation.npy'
+    fileNameTrain = outputDir+'workdir/'+processName+inputSuffix+'_train.npy'
+    fileNameTest = outputDir+'workdir/'+processName+inputSuffix+'_test.npy'
+    fileNameValidation = outputDir+'workdir/'+processName+inputSuffix+'_validation.npy'
 
     fileNames = [fileNameTrain, fileNameTest, fileNameValidation]
 
@@ -88,7 +118,7 @@ def split_TrainTestValidation(processName, percentTrain, percentTest, percentVal
     return fileNames
 
 
-def prepare_Dataset(used_classes, sample_type, inputSuffix='_norm', workdirName='workdir'): # sample_type = 'train', 'test', or 'validation'
+def prepare_Dataset(used_classes, sample_type, inputSuffix='_norm'): # sample_type = 'train', 'test', or 'validation'
 
     """Returns a gigantic pandas dataframe, containing all events to be trained/tested/validated on."""
 
@@ -96,11 +126,11 @@ def prepare_Dataset(used_classes, sample_type, inputSuffix='_norm', workdirName=
 
     for u_cl in used_classes:
 
-        fileName = './'+workdirName+'/'+u_cl+inputSuffix+'_'+sample_type+'.npy'
+        fileName = outputDir+'workdir/'+u_cl+inputSuffix+'_'+sample_type+'.npy'
         dataArray = np.load(fileName)
         dataFrame = pd.DataFrame(data=dataArray, columns=inputVariableNames)
 
-        fileNameWeights = './'+workdirName+'/'+u_cl+'_weights_'+sample_type+'.npy'
+        fileNameWeights = outputDir+'workdir/'+u_cl+'_weights_'+sample_type+'.npy'
         weightsArray = np.load(fileNameWeights)
         dataFrame['EventWeight'] = weightsArray
 
@@ -113,7 +143,7 @@ def prepare_Dataset(used_classes, sample_type, inputSuffix='_norm', workdirName=
     return completeDataFrame
 
 
-def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm', workdirName='workdir'): # sample_type = 'train', 'test', or 'validation'
+def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm'): # sample_type = 'train', 'test', or 'validation'
 
     """Returns a dictionary containing data values, string labels, and encoded labels which can directly be used with the model.fit() function of Keras."""
 
@@ -121,7 +151,7 @@ def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm', 
     # https://machinelearningmastery.com/multi-class-classification-tutorial-keras-deep-learning-library/
 
     # load dataset
-    data = prepare_Dataset(used_classes, sample_type, inputSuffix, workdirName).values
+    data = prepare_Dataset(used_classes, sample_type, inputSuffix).values
     data_values = data[:,0:-2] # input vectors for NN
     data_labels = data[:,-1] # classes associated to each event, given in string format
     data_weights = data[:,-2] # event weights
@@ -182,9 +212,10 @@ def train_NN(parameters):
     """Do the actual training of your NN."""
 
     # split all datasets into training, test, and validation samples!
+    splits = parameters['splits']
     for u_cl in parameters['usedClasses']:
-        split_TrainTestValidation(u_cl, 0.6, 0.2, 0.2)
-        split_TrainTestValidation(u_cl, 0.6, 0.2, 0.2, '_weights')
+        split_TrainTestValidation(u_cl, splits['train'], splits['test'], splits['validation'])
+        split_TrainTestValidation(u_cl, splits['train'], splits['test'], splits['validation'], '_weights')
 
     # get data for Keras usage!
     data_train = make_DatasetUsableWithKeras(parameters['usedClasses'], 'train')
@@ -198,7 +229,7 @@ def train_NN(parameters):
     ])
 
     # initialize checkpointer callback
-    filePathCheckPoints = outputDir+'checkpoints/checkpoint-{epoch:03d}.h5'
+    filePathCheckPoints = outputDir+checkpointDir+'checkpoint-{epoch:03d}.h5'
     checkpointer = ModelCheckpoint(filePathCheckPoints, verbose=1, save_weights_only=True, period=10) # lwtnn only supports json+hdf5 format, not hdf5 standalone
 
     # train!
@@ -227,18 +258,4 @@ def dump_ParametersIntoJsonFile(parameters):
 
 if __name__ == '__main__':
 
-    parameters = {
-        'usedClasses': ['tW_signal', 'tW_other', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
-        'layers': [64, 64],
-        'dropout': True,
-        'dropout_rate': 0.6,
-        'epochs': 800,
-        'batch_size': 65536,
-        'learning_rate': 0.0001,
-        'regularizer': '', # either 'l1' or 'l2' or just ''
-        'regularizer_rate': 0.01
-    }
-
-    dump_ParametersIntoJsonFile(parameters)
-    train_NN(parameters)
-    print("Done.")
+    main()
