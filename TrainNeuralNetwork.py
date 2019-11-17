@@ -32,7 +32,7 @@ print("Using these input variables:", inputVariableNames)
 timeTag = datetime.now()
 timeTag = timeTag.strftime('%y-%m-%d-%H-%M-%S')
 outputDir = './outputs/dnn_'+timeTag+'/'
-checkpointDir = 'checkpoints' #subfolder of outputDir
+checkpointDir = 'checkpoints/' #subfolder of outputDir
 
 ### end of global stuff
 
@@ -48,12 +48,12 @@ def main():
     os.makedirs(outputDir+'workdir/', exist_ok=True)
 
     parameters = {
-        'usedClasses': ['tW_signal', 'tW_other', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson'],
+        'usedClasses': ['tW_signal', 'tW_other', 'TTbar', 'WJets', 'DYJets'],
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
-        'layers': [64, 64],
+        'layers': [16, 16],
         'dropout': True,
-        'dropout_rate': 0.6,
-        'epochs': 5,
+        'dropout_rate': 0.5,
+        'epochs': 1000,
         'batch_size': 65536,
         'learning_rate': 0.0005, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
