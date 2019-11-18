@@ -1,0 +1,16 @@
+executable = /nfs/dust/cms/user/matthies/WorkingArea/SingleTopClassifier/job.sh
+
+initialdir = /nfs/dust/cms/user/matthies/WorkingArea/SingleTopClassifier
+
+log        = outputs/job_outputs/$(Cluster)_$(Process).log
+output     = outputs/job_outputs/$(Cluster)_$(Process).out
+error      = outputs/job_outputs/$(Cluster)_$(Process).err
+
+Requirements = OpSysAndVer == "CentOS7"
+Request_GPU = 1
++RequestRuntime = 86400
+
+notification = Always
+notify_user = christopher.matthies@desy.de
+
+queue 1
