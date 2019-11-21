@@ -6,7 +6,7 @@ read answer_scp
 
 mkdir -p ./samples
 
-declare -a arr=("ST_tW_signal" "ST_tW_other" "ST_non-tW_t-Ch" "ST_non-tW_s-Ch" "TTbar" "WJets" "DYJets" "Diboson" "QCD")
+declare -a arr=("ST_tW_signal" "ST_tW_other" "ST_tW_bkg_TopToHadAndWToTau" "ST_tW_bkg_Else" "ST_non-tW_t-Ch" "ST_non-tW_s-Ch" "TTbar" "WJets" "DYJets" "Diboson" "QCD")
 
 for i in "${arr[@]}"
 do

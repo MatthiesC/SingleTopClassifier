@@ -48,14 +48,17 @@ def main():
     os.makedirs(outputDir+'workdir/', exist_ok=True)
 
     parameters = {
-        'usedClasses': ['tW_signal', 'tW_other', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
+        #'usedClasses': ['tW_signal', 'tW_other', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
+        'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
+        #'usedClasses': ['tW_signal', 'tW_other', 'TTbar', 'WJets', 'DYJets'],
+        #'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
         'layers': [16, 16],
-        'dropout': True,
+        'dropout': False,
         'dropout_rate': 0.5,
         'epochs': 1000,
         'batch_size': 65536,
-        'learning_rate': 0.0005, #Adam default: 0.001
+        'learning_rate': 0.001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
         'regularizer_rate': 0.01
     }

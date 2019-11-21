@@ -10,6 +10,14 @@ dict_Classes = {
         "Use":True,
         "File":"ST_tW_other.root"
     },
+    "tW_bkg_TopToHadAndWToTau":{
+        "Use":True,
+        "File":"ST_tW_bkg_TopToHadAndWToTau.root"
+    },
+    "tW_bkg_Else":{
+        "Use":True,
+        "File":"ST_tW_bkg_Else.root"
+    },
     "tChannel":{
         "Use":True,
         "File":"ST_non-tW_t-Ch.root"
