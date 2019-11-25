@@ -8,6 +8,12 @@ import pickle
 import numpy as np
 
 
+def insert_CMS(axisObject):
+
+    axisObject.text(0.05,0.88,"CMS", transform=axisObject.transAxes, fontweight='bold', fontsize=16)
+    axisObject.text(0.17,0.88,"Simulation, Work in progress", transform=axisObject.transAxes, style='italic', fontsize=12)
+
+
 def insert_InfoBox(axisObject, customHist, kerasHist, type='loss', n_last_epochs=20):
 
     train_x = np.array(customHist['train_'+str(type)][-n_last_epochs:])
@@ -48,6 +54,7 @@ def plot_Loss(dnnTag):
     plt.title('Tag: '+dnnTag)
 
     insert_InfoBox(ax, model_customHistory, model_history, 'loss')
+    insert_CMS(ax)
 
     saveFile = './outputs/'+dnnTag+'/plots/loss.pdf'
     fig.savefig(saveFile)
@@ -79,6 +86,7 @@ def plot_Metrics(dnnTag):
     plt.title('Tag: '+dnnTag)
     
     insert_InfoBox(ax, model_customHistory, model_history, 'categorical_accuracy')
+    insert_CMS(ax)
 
     saveFile = './outputs/'+dnnTag+'/plots/accuracy.pdf'
     fig.savefig(saveFile)
