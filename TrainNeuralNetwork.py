@@ -247,6 +247,8 @@ def predict_Labels(parameters, model, data_train, data_test, data_validation):
 
 def load_Model():
 
+    """Load previously trained model from disk."""
+
     # load json and create model
     json_file = open(outputDir+'model_arch.json', 'r')
     loaded_model_json = json_file.read()
