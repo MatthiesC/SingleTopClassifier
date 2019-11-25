@@ -58,7 +58,7 @@ def main():
         'layers': [16, 16],
         'dropout': False,
         'dropout_rate': 0.5,
-        'epochs': 1,
+        'epochs': 1000,
         'batch_size': 65536,
         'learning_rate': 0.001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
