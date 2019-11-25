@@ -9,13 +9,14 @@ import pickle
 import json
 
 from keras.utils import np_utils
-from keras.models import Sequential
+from keras.models import Sequential, model_from_json
 from keras.layers import Dense, BatchNormalization, Dropout
 from keras import optimizers
 from keras import metrics
 from keras import regularizers
 from keras.callbacks import ModelCheckpoint
 from CustomCallback import AdditionalValidationSets
+from Plotting import get_Parameters
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import shuffle
@@ -54,9 +55,9 @@ def main():
         #'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
         'layers': [16, 16],
-        'dropout': False,
+        'dropout': True,
         'dropout_rate': 0.5,
-        'epochs': 1000,
+        'epochs': 1,
         'batch_size': 65536,
         'learning_rate': 0.001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
@@ -167,6 +168,7 @@ def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm'):
     encoder = LabelEncoder()
     encoder.fit(data_labels)
     encoded_data_labels = encoder.transform(data_labels)
+    print("Label encoder:", encoded_data_labels)
 
     # convert integers to dummy values (i.e. one hot encoded)
     data_encodedLabels = np_utils.to_categorical(encoded_data_labels)
@@ -214,6 +216,50 @@ def define_NetworkArchitecture(parameters):
     return model
 
 
+def predict_Labels(parameters, model, data_train, data_test, data_validation):
+
+    """Predict labels of train/test/validation datasets using the trained model."""
+
+    predDir = outputDir+'predictions/'
+    os.makedirs(predDir, exist_ok=True)
+
+    print("Predicting labels of training dataset...")
+    pred_train = model.predict(data_train['values'])
+    np.save(predDir+'pred_train.npy', pred_train)
+    for u_cl in parameters['usedClasses']:
+        tmp = pred_train[data_train['labels'] == u_cl]
+        np.save(predDir+'pred_train__'+str(u_cl)+'.npy', tmp)
+
+    print("Predicting labels of test dataset...")
+    pred_test = model.predict(data_test['values'])
+    np.save(predDir+'pred_test.npy', pred_test)
+    for u_cl in parameters['usedClasses']:
+        tmp = pred_test[data_test['labels'] == u_cl]
+        np.save(predDir+'pred_test__'+str(u_cl)+'.npy', tmp)
+
+    print("Predicting labels of validation dataset...")
+    pred_validation = model.predict(data_validation['values'])
+    np.save(predDir+'pred_validation.npy', pred_validation)
+    for u_cl in parameters['usedClasses']:
+        tmp = pred_validation[data_validation['labels'] == u_cl]
+        np.save(predDir+'pred_validation__'+str(u_cl)+'.npy', tmp)
+
+
+def load_Model():
+
+    # load json and create model
+    json_file = open(outputDir+'model_arch.json', 'r')
+    loaded_model_json = json_file.read()
+    json_file.close()
+    loaded_model = model_from_json(loaded_model_json)
+    # load weights into new model
+    loaded_model.load_weights(outputDir+"model_weights.h5")
+    print("Loaded model from disk")
+    # don't need to compile if you only want to predict and not train/evaluate
+
+    return loaded_model
+
+
 def train_NN(parameters):
 
     """Do the actual training of your NN."""
@@ -254,6 +300,9 @@ def train_NN(parameters):
     with open(outputDir+'model_customHistory.pkl', 'wb') as f:
         pickle.dump(customHistory.history, f)
     print("Saved model to disk.")
+
+    # predict labels of datasets!
+    predict_Labels(parameters, model, data_train, data_test, data_validation)
 
 
 def dump_ParametersIntoJsonFile(parameters):
