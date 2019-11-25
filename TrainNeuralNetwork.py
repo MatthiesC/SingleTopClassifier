@@ -16,6 +16,7 @@ from keras import metrics
 from keras import regularizers
 from keras.callbacks import ModelCheckpoint
 from CustomCallback import AdditionalValidationSets
+from CustomLosses import categorical_focal_loss
 from Plotting import get_Parameters
 
 from sklearn.preprocessing import LabelEncoder
@@ -50,18 +51,21 @@ def main():
 
     parameters = {
         #'usedClasses': ['tW_signal', 'tW_other', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
-        'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
+        #'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
         #'usedClasses': ['tW_signal', 'tW_other', 'TTbar', 'WJets', 'DYJets'],
-        #'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
+        'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
         'layers': [16, 16],
-        'dropout': True,
+        'dropout': False,
         'dropout_rate': 0.5,
         'epochs': 1,
         'batch_size': 65536,
         'learning_rate': 0.001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
-        'regularizer_rate': 0.01
+        'regularizer_rate': 0.01,
+        'focal_loss': True,
+        'focal_alpha': 0.25,
+        'focal_gamma': 2.0
     }
 
     dump_ParametersIntoJsonFile(parameters)
@@ -203,8 +207,13 @@ def define_NetworkArchitecture(parameters):
 
     my_optimizer = optimizers.Adam(lr=parameters['learning_rate'])
     my_metrics = [metrics.categorical_accuracy]
+    my_loss = None
+    if parameters['focal_loss']:
+        my_loss = [categorical_focal_loss(alpha=parameters['focal_alpha'], gamma=parameters['focal_gamma'])]
+    else:
+        my_loss = 'categorical_crossentropy'
 
-    model.compile(loss='categorical_crossentropy', optimizer=my_optimizer, metrics=my_metrics)
+    model.compile(loss=my_loss, optimizer=my_optimizer, metrics=my_metrics)
 
     # save network architecture to disk before training begins!
     architecture = model.to_json()
