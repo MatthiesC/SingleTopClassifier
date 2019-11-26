@@ -216,11 +216,17 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
         colors = list()
         for u_cl in reversed(parameters['usedClasses']):
             x.append(data[dataset_type][u_cl]['predictions'][:,i])
-            w.append(data[dataset_type][u_cl]['weights'])
-            cl.append(u_cl)
+            norm_factor = None
+            if u_cl == 'TTbar':
+                norm_factor = 0.784 ### highly dependent on phase space / selection !!!
+                cl.append(u_cl+' x'+str(norm_factor))
+            else:
+                norm_factor = 1.0
+                cl.append(u_cl)
+            w.append(data[dataset_type][u_cl]['weights']*norm_factor)
             colors.append(dict_Classes[u_cl]['color'])
 
-        plt.hist(x, bins=100, weights=w, stacked=True, range=(0,1), label=cl, color=colors)
+        plt.hist(x, bins=50, weights=w, stacked=True, range=(0,1), label=cl, color=colors)
 
         plt.legend(loc='upper center', fontsize=5, ncol=2)
         plt.xlabel('NN output node '+str(i))
