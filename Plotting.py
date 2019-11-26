@@ -44,6 +44,8 @@ def plot_Loss(dnnTag):
     with open(pickleFileCustom, 'rb') as f:
         model_customHistory = pickle.load(f)
 
+    parameters = get_Parameters(dnnTag)
+
     plt.clf()
     fig, ax = plt.subplots()
     plt.grid()
@@ -51,8 +53,13 @@ def plot_Loss(dnnTag):
     plt.plot(x, model_customHistory['train_loss'], label='Training set')
     plt.plot(x, model_history['val_loss'], label='Validation set', linestyle='--')
     plt.legend(loc='upper right')
-    plt.ylim([0.00, 0.25])
-    plt.ylabel('Loss (categorical crossentropy)')
+    #plt.ylim([0.00, 0.25])
+    ylabel = None
+    if parameters['focal_loss']:
+        ylabel = 'Categorical focal loss'
+    else:
+        ylabel = 'Loss (categorical crossentropy)'
+    plt.ylabel(ylabel)
     plt.xlabel('Number of training epochs')
     plt.title('Tag: '+dnnTag)
 
