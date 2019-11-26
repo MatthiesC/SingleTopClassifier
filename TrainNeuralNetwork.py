@@ -8,6 +8,8 @@ import pandas as pd
 import pickle
 import json
 
+import tensorflow as tf
+
 from keras.utils import np_utils
 from keras.models import Sequential, model_from_json
 from keras.layers import Dense, BatchNormalization, Dropout
@@ -56,10 +58,10 @@ def main():
         'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
         'layers': [16, 16],
-        'dropout': False,
-        'dropout_rate': 0.5,
-        'epochs': 1000,
-        'batch_size': 65536,
+        'dropout': True,
+        'dropout_rate': 0.25,
+        'epochs': 800,
+        'batch_size': 16384, #65536
         'learning_rate': 0.001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
         'regularizer_rate': 0.01,
@@ -300,7 +302,8 @@ def train_NN(parameters):
 
     # train!
     model = define_NetworkArchitecture(parameters)
-    history = model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=parameters['epochs'], batch_size=parameters['batch_size'], shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']), callbacks=[customHistory, checkpointer])
+    with tf.device('/gpu:0'):
+        history = model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=parameters['epochs'], batch_size=parameters['batch_size'], shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']), callbacks=[customHistory, checkpointer])
     print("Model history:\n", history.history)
 
     # save final model to disk!
