@@ -13,8 +13,13 @@ import json
 
 def insert_CMS(axisObject):
 
-    axisObject.text(0.05,0.88,"CMS", transform=axisObject.transAxes, fontweight='bold', fontsize=16)
-    axisObject.text(0.17,0.88,"Simulation, Work in progress", transform=axisObject.transAxes, style='italic', fontsize=12)
+    axisObject.text(0.00,1.02,"CMS", transform=axisObject.transAxes, fontweight='bold', fontsize=16)
+    axisObject.text(0.12,1.02,"Simulation, Work in progress", transform=axisObject.transAxes, style='italic', fontsize=12)
+
+
+def insert_dnnTag(axisObject, dnnTag):
+
+    axisObject.text(1.00,1.02,"Tag: "+dnnTag, transform=axisObject.transAxes, fontsize=8, horizontalalignment='right')
 
 
 def insert_InfoBox(axisObject, customHist, kerasHist, type='loss', n_last_epochs=20):
@@ -55,14 +60,14 @@ def plot_Loss(dnnTag):
     plt.legend(loc='upper right')
     #plt.ylim([0.00, 0.25])
     ylabel = None
-    if parameters['focal_loss']:
+    if parameters.get('focal_loss'):
         ylabel = 'Categorical focal loss'
     else:
         ylabel = 'Loss (categorical crossentropy)'
     plt.ylabel(ylabel)
     plt.xlabel('Number of training epochs')
-    plt.title('Tag: '+dnnTag)
-
+    
+    insert_dnnTag(ax, dnnTag)
     insert_InfoBox(ax, model_customHistory, model_history, 'loss')
     insert_CMS(ax)
 
@@ -93,8 +98,8 @@ def plot_Metrics(dnnTag):
     plt.ylim([0.00, 1.00])
     plt.ylabel('Categorical accuracy')
     plt.xlabel('Number of training epochs')
-    plt.title('Tag: '+dnnTag)
-    
+
+    insert_dnnTag(ax, dnnTag)
     insert_InfoBox(ax, model_customHistory, model_history, 'categorical_accuracy')
     insert_CMS(ax)
 
@@ -147,10 +152,11 @@ def plot_PredictionsNormalized(dnnTag, dataset_type):  # dataset_type = train/te
             w = data[dataset_type][u_cl]['weights']
             plt.hist(x, bins=100, weights=w, density=True, histtype='step', range=(0,1), label=u_cl, color=dict_Classes[u_cl]['color'])
 
-        plt.legend(loc='upper center')
+        plt.legend(loc='upper center', fontsize=5, ncol=2)
         plt.xlabel('NN output node '+str(i))
         plt.ylabel('Normalized number of events [a. u.]')
 
+        insert_dnnTag(ax, dnnTag)
         insert_CMS(ax)
     
         saveFile = './outputs/'+dnnTag+'/plots/predictions_'+dataset_type+'_node'+str(i)+'.pdf'
@@ -180,10 +186,11 @@ def plot_PredictionTrainVSTest(dnnTag):
             w_test = data['test'][u_cl]['weights']
             plt.hist(x_test, bins=100, weights=w_test, density=True, histtype='step', range=(0,1), label=u_cl+' test', color=dict_Classes[u_cl]['color'], linestyle='--')
         
-        plt.legend(loc='upper center')
+        plt.legend(loc='upper center', fontsize=5, ncol=2)
         plt.xlabel('NN output node '+str(i))
         plt.ylabel('Normalized number of events [a. u.]')
-        
+
+        insert_dnnTag(ax, dnnTag)
         insert_CMS(ax)
         
         saveFile = './outputs/'+dnnTag+'/plots/predictions_KStest_node'+str(i)+'.pdf'
@@ -215,10 +222,11 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
 
         plt.hist(x, bins=100, weights=w, stacked=True, range=(0,1), label=cl, color=colors)
 
-        plt.legend(loc='upper center')
+        plt.legend(loc='upper center', fontsize=5, ncol=2)
         plt.xlabel('NN output node '+str(i))
         plt.ylabel('Number of events')
 
+        insert_dnnTag(ax, dnnTag)
         insert_CMS(ax)
     
         saveFile = './outputs/'+dnnTag+'/plots/predictions_'+dataset_type+'_node'+str(i)+'_stacked.pdf'
