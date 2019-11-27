@@ -58,16 +58,16 @@ def main():
         'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
         'layers': [16, 16],
-        'dropout': True,
-        'dropout_rate': 0.25,
-        'epochs': 1,
-        'batch_size': 16384, #65536
+        'dropout': False,
+        'dropout_rate': 0.5,
+        'epochs': 500,
+        'batch_size': 65536, #65536 #16384
         'learning_rate': 0.001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
         'regularizer_rate': 0.01,
         'focal_loss': True,
         'focal_alpha': 0.25,
-        'focal_gamma': 2.0
+        'focal_gamma': 5.0
     }
 
     dump_ParametersIntoJsonFile(parameters)
