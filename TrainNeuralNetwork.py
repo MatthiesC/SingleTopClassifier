@@ -175,7 +175,7 @@ def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm'):
     encoder.fit(data_labels)
     print('Used classes (order used for the encoding of output node numbers, i.e. node 0 corresponds to the first entry in this list here):')
     print(encoder.classes_)
-    np.save(outputDir+'encoder_classes.npy', encoder.classes_)
+    np.save(outputDir+'encoder_classes.npy', (np.array(encoder.classes_)).astype(str)) # conversion to str format needed to avoid 'Object arrays cannot be loaded when allow_pickle=False' error
     encoded_data_labels = encoder.transform(data_labels)
 
     # convert integers to dummy values (i.e. one hot encoded)
