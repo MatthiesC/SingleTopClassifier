@@ -3,6 +3,7 @@ mpl.use('Agg') # don't display plots while plotting ("batch mode")
 import matplotlib.pyplot as plt
 
 from config.SampleClasses import dict_Classes
+from sklearn.metrics import roc_curve, auc
 
 import sys
 import os
@@ -22,14 +23,14 @@ def insert_dnnTag(axisObject, dnnTag):
     axisObject.text(1.00,1.02,"Tag: "+dnnTag, transform=axisObject.transAxes, fontsize=8, horizontalalignment='right')
 
 
-def insert_InfoBox(axisObject, customHist, kerasHist, type='loss', n_last_epochs=20):
+def insert_InfoBox(axisObject, customHist, kerasHist, plot_type='loss', n_last_epochs=20):
 
-    train_x = np.array(customHist['train_'+str(type)][-n_last_epochs:])
-    valid_x = np.array(kerasHist['val_'+str(type)][-n_last_epochs:])
+    train_x = np.array(customHist['train_'+str(plot_type)][-n_last_epochs:])
+    valid_x = np.array(kerasHist['val_'+str(plot_type)][-n_last_epochs:])
     textstr = '\n'.join((
-        r'After epoch '+str(len(customHist['train_'+str(type)]))+':',
-        r'Training set: %.3f %%' % (100*customHist['train_'+str(type)][-1], ),
-        r'Validation set: %.3f %%' % (100*kerasHist['val_'+str(type)][-1], ),
+        r'After epoch '+str(len(customHist['train_'+str(plot_type)]))+':',
+        r'Training set: %.3f %%' % (100*customHist['train_'+str(plot_type)][-1], ),
+        r'Validation set: %.3f %%' % (100*kerasHist['val_'+str(plot_type)][-1], ),
         r'Last '+str(n_last_epochs)+' epochs:',
         r'Training set: $%.3f \pm %.3f$ %%' % (100*train_x.mean(), 100*train_x.std(), ),
         r'Validation set: $%.3f \pm %.3f$ %%' % (100*valid_x.mean(), 100*valid_x.std(), )))
@@ -241,6 +242,66 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
         plt.close()
 
 
+def plot_ROC(dnnTag, dataset_type):
+
+    print("Calculating and plotting ROC curves...")
+
+    parameters = get_Parameters(dnnTag)
+    data = load_Predictions(dnnTag)
+    node_names = np.load('./outputs/'+dnnTag+'/encoder_classes.npy')
+
+    plt.clf()
+    fig, ax = plt.subplots()
+
+    plt.plot([0,1], [0,1], color='black', linestyle='--')
+
+    for process in parameters['usedClasses']: # loop over output class nodes
+
+        node_id = None
+        for node in range(len(node_names)):
+            if node_names[node] == process:
+                node_id = node
+                print("Node ID for class "+process+":", node_id)
+                break
+
+        y_score_list = list()
+        y_true_list = list()
+        weights_list = list()
+
+        for u_cl in parameters['usedClasses']:
+            y_score_list.append(data[dataset_type][u_cl]['predictions'][:,node_id])
+            weights_list.append(data[dataset_type][u_cl]['weights'])
+            if u_cl == process:
+                y_true_list.append(np.ones(len(data[dataset_type][u_cl]['weights']), dtype=int))
+            else:
+                y_true_list.append(np.zeros(len(data[dataset_type][u_cl]['weights']), dtype=int))
+
+        y_score = np.concatenate(y_score_list)
+        y_true = np.concatenate(y_true_list)
+        weights = np.concatenate(weights_list)
+
+        fpr, tpr, thresholds = roc_curve(y_true, y_score, sample_weight=weights)
+        roc_area = auc(fpr, tpr)
+
+        # plot the ROC for process X in output node X!
+        label = process+" (AUC = %.3f)" % roc_area
+        plt.plot(fpr, tpr, color=dict_Classes[process]['color'], label=label)
+
+    plt.grid()
+    plt.legend(loc='lower right', fontsize=8)
+    plt.xlabel("Background efficieny")
+    plt.ylabel("Signal class efficiency")
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+
+    insert_dnnTag(ax, dnnTag)
+    insert_CMS(ax)
+
+    saveFile = './outputs/'+dnnTag+'/plots/roc.pdf'
+    fig.savefig(saveFile)
+    plt.close()
+
+
 if __name__ == '__main__':
 
     dnnTag = sys.argv[1] # dnn_yy-mm-dd-hh-mm-ss
@@ -252,3 +313,4 @@ if __name__ == '__main__':
         plot_PredictionsNormalized(dnnTag, dataset_type)
         plot_PredictionsStacked(dnnTag, dataset_type)
     plot_PredictionTrainVSTest(dnnTag)
+    plot_ROC(dnnTag, 'train') # maybe use train+validation set?
