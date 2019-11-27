@@ -212,7 +212,7 @@ def define_NetworkArchitecture(parameters):
     my_optimizer = optimizers.Adam(lr=parameters['learning_rate'])
     my_metrics = [metrics.categorical_accuracy]
     my_loss = None
-    if parameters['focal_loss']:
+    if parameters.get('focal_loss'):
         my_loss = [categorical_focal_loss(alpha=parameters['focal_alpha'], gamma=parameters['focal_gamma'])]
     else:
         my_loss = 'categorical_crossentropy'
