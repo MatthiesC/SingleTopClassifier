@@ -45,7 +45,7 @@ dict_Classes = {
     "DYJets":{
         "Use":True,
         "File":"DYJets.root",
-        "color": "yellow"
+        "color": "gold"
     },
     "Diboson":{
         "Use":True,
