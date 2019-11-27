@@ -58,7 +58,7 @@ def plot_Loss(dnnTag):
     plt.plot(x, model_customHistory['train_loss'], label='Training set')
     plt.plot(x, model_history['val_loss'], label='Validation set', linestyle='--')
     plt.legend(loc='upper right')
-    #plt.ylim([0.00, 0.25])
+    plt.ylim(bottom=0.00)
     ylabel = None
     if parameters.get('focal_loss'):
         ylabel = 'Categorical focal loss'
@@ -215,7 +215,8 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
         cl = list()
         colors = list()
         for u_cl in reversed(parameters['usedClasses']):
-            x.append(data[dataset_type][u_cl]['predictions'][:,i])
+            tmp_x = data[dataset_type][u_cl]['predictions'][:,i]
+            x.append(tmp_x)
             norm_factor = None
             if u_cl == 'TTbar':
                 norm_factor = 0.784 ### highly dependent on phase space / selection !!!
