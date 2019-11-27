@@ -60,7 +60,7 @@ def main():
         'layers': [16, 16],
         'dropout': True,
         'dropout_rate': 0.25,
-        'epochs': 800,
+        'epochs': 1,
         'batch_size': 16384, #65536
         'learning_rate': 0.001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
@@ -173,8 +173,10 @@ def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm'):
     # encode class values as integers
     encoder = LabelEncoder()
     encoder.fit(data_labels)
+    print('Used classes (order used for the encoding of output node numbers, i.e. node 0 corresponds to the first entry in this list here):')
+    print(encoder.classes_)
+    np.save(outputDir+'encoder_classes.npy', encoder.classes_)
     encoded_data_labels = encoder.transform(data_labels)
-    print("Label encoder:", encoded_data_labels)
 
     # convert integers to dummy values (i.e. one hot encoded)
     data_encodedLabels = np_utils.to_categorical(encoded_data_labels)
