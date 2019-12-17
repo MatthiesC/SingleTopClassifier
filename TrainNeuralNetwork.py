@@ -196,14 +196,14 @@ def augment_Dataset(parameters, data, sample_type): # change_weights_only: only 
 
     print("Augmenting "+str(sample_type)+" data...")
 
-    change_weights_only = parameters['change_weights_only']
+    change_weights_only = parameters.get('change_weights_only')
 
     sums_of_weights = dict()
     sums_of_weights_aug = dict()
     max_sum = 0.
     max_ucl = ''
 
-    for u_cl in parameters['usedClasses']:
+    for u_cl in parameters.get('usedClasses'):
         tmp = data['weights'][data['labels'] == u_cl]
         sums_of_weights[u_cl] = tmp.sum()
         if tmp.sum() > max_sum:
@@ -214,12 +214,12 @@ def augment_Dataset(parameters, data, sample_type): # change_weights_only: only 
 
     data_aug_values = np.empty([0, len(inputVariableNames)])
     data_aug_labels = np.array(list())
-    data_aug_encodedLabels = np.empty([0, len(parameters['usedClasses'])])
+    data_aug_encodedLabels = np.empty([0, len(parameters.get('usedClasses'))])
     data_aug_weights = np.array(list())
 
     if change_weights_only:
 
-        for u_cl in parameters['usedClasses']:
+        for u_cl in parameters.get('usedClasses'):
 
             global_scale_factor = max_sum/sums_of_weights[u_cl]
             tmp = data['weights'][data['labels'] == u_cl]
@@ -237,13 +237,13 @@ def augment_Dataset(parameters, data, sample_type): # change_weights_only: only 
 
     else: # this will take some minutes! For testing, use change_weights_only=True
 
-        for u_cl in parameters['usedClasses']:
+        for u_cl in parameters.get('usedClasses'):
 
             global_scale_factor = max_sum/sums_of_weights[u_cl]
 
             data_aug_values_ucl = np.empty([0, len(inputVariableNames)])
             data_aug_labels_ucl = np.array(list())
-            data_aug_encodedLabels_ucl = np.empty([0, len(parameters['usedClasses'])])
+            data_aug_encodedLabels_ucl = np.empty([0, len(parameters.get('usedClasses'))])
             data_aug_weights_ucl = np.array(list())
 
             cardinality_ucl = len(data['values'][data['labels'] == u_cl])
@@ -272,7 +272,7 @@ def augment_Dataset(parameters, data, sample_type): # change_weights_only: only 
 
     # sanity check whether sum of weights for all classes now approximately equal:
     print("Sanity check after data augmentation:")
-    for u_cl in parameters['usedClasses']:
+    for u_cl in parameters.get('usedClasses'):
         tmp = data_aug['weights'][data_aug['labels'] == u_cl]
         sums_of_weights_aug[u_cl] = tmp.sum()
         print("Sum of weights for non-augm. class "+str(u_cl)+": ", str(sums_of_weights[u_cl]))
@@ -347,21 +347,21 @@ def predict_Labels(parameters, model, data_train, data_test, data_validation, au
     print("Predicting labels of training dataset...")
     pred_train = model.predict(data_train['values'])
     np.save(predDir+'pred'+augPostFix+'_train.npy', pred_train)
-    for u_cl in parameters['usedClasses']:
+    for u_cl in parameters.get('usedClasses'):
         tmp = pred_train[data_train['labels'] == u_cl]
         np.save(predDir+'pred'+augPostFix+'_train__'+str(u_cl)+'.npy', tmp)
 
     print("Predicting labels of test dataset...")
     pred_test = model.predict(data_test['values'])
     np.save(predDir+'pred'+augPostFix+'_test.npy', pred_test)
-    for u_cl in parameters['usedClasses']:
+    for u_cl in parameters.get('usedClasses'):
         tmp = pred_test[data_test['labels'] == u_cl]
         np.save(predDir+'pred'+augPostFix+'_test__'+str(u_cl)+'.npy', tmp)
 
     print("Predicting labels of validation dataset...")
     pred_validation = model.predict(data_validation['values'])
     np.save(predDir+'pred'+augPostFix+'_validation.npy', pred_validation)
-    for u_cl in parameters['usedClasses']:
+    for u_cl in parameters.get('usedClasses'):
         tmp = pred_validation[data_validation['labels'] == u_cl]
         np.save(predDir+'pred'+augPostFix+'_validation__'+str(u_cl)+'.npy', tmp)
 
@@ -388,20 +388,20 @@ def train_NN(parameters):
     """Do the actual training of your NN."""
 
     # split all datasets into training, test, and validation samples!
-    splits = parameters['splits']
+    splits = parameters.get('splits')
     seed = 0 # do this seeding more elegant in the future, see comment in split_TrainTestValidation function definition. However, need to ensure that data and weights use same seed!
-    for u_cl in parameters['usedClasses']:
+    for u_cl in parameters.get('usedClasses'):
         split_TrainTestValidation(u_cl, splits['train'], splits['test'], splits['validation'], seed)
         split_TrainTestValidation(u_cl, splits['train'], splits['test'], splits['validation'], seed, '_weights')
         seed = seed+1
 
     # get data for Keras usage!
-    data_train_raw = make_DatasetUsableWithKeras(parameters['usedClasses'], 'train')
-    data_test_raw = make_DatasetUsableWithKeras(parameters['usedClasses'], 'test')
-    data_validation_raw = make_DatasetUsableWithKeras(parameters['usedClasses'], 'validation')
+    data_train_raw = make_DatasetUsableWithKeras(parameters.get('usedClasses'), 'train')
+    data_test_raw = make_DatasetUsableWithKeras(parameters.get('usedClasses'), 'test')
+    data_validation_raw = make_DatasetUsableWithKeras(parameters.get('usedClasses'), 'validation')
 
     # augment all datasets, such that they have equal sum of weights inside loss function!
-    if parameters['augmentation']:
+    if parameters.get('augmentation'):
         data_train = augment_Dataset(parameters, data_train_raw, 'train')
         data_test = augment_Dataset(parameters, data_test_raw, 'test')
         data_validation = augment_Dataset(parameters, data_validation_raw, 'validation')
@@ -421,7 +421,7 @@ def train_NN(parameters):
     # train!
     model = define_NetworkArchitecture(parameters)
     with tf.device('/gpu:0'):
-        history = model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=parameters['epochs'], batch_size=parameters['batch_size'], shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']), callbacks=[customHistory, checkpointer])
+        history = model.fit(data_train['values'], data_train['encodedLabels'], sample_weight=data_train['weights'], epochs=parameters.get('epochs'), batch_size=parameters.get('batch_size'), shuffle=True, validation_data=(data_validation['values'], data_validation['encodedLabels'], data_validation['weights']), callbacks=[customHistory, checkpointer])
     print("Model history:\n", history.history)
 
     # save final model to disk!
