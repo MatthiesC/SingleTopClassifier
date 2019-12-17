@@ -57,17 +57,19 @@ def main():
         #'usedClasses': ['tW_signal', 'tW_other', 'TTbar', 'WJets', 'DYJets'],
         'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
+        'augmentation': True,
+        'change_weights_only': True, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
         'layers': [16, 16],
         'dropout': False,
         'dropout_rate': 0.5,
-        'epochs': 500,
+        'epochs': 800,
         'batch_size': 65536, #65536 #16384
         'learning_rate': 0.001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
         'regularizer_rate': 0.01,
-        'focal_loss': True,
+        'focal_loss': False,
         'focal_alpha': 0.25,
-        'focal_gamma': 5.0
+        'focal_gamma': 4.0
     }
 
     dump_ParametersIntoJsonFile(parameters)
@@ -186,6 +188,98 @@ def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm'):
     return result
 
 
+def augment_Dataset(parameters, data, sample_type): # change_weights_only: only change the sample weights such that each class has the same sum of weights, do not perform an actual augmentation of the dataset
+
+    """Augments underrepresented classes in a given dataset up to sums of weights of the class with the highest sum of weights."""
+
+    print("Augmenting "+str(sample_type)+" data...")
+
+    change_weights_only = parameters['change_weights_only']
+
+    sums_of_weights = dict()
+    sums_of_weights_aug = dict()
+    max_sum = 0.
+    max_ucl = ''
+
+    for u_cl in parameters['usedClasses']:
+        tmp = data['weights'][data['labels'] == u_cl]
+        sums_of_weights[u_cl] = tmp.sum()
+        if tmp.sum() > max_sum:
+            max_sum = tmp.sum()
+            max_ucl = u_cl
+
+    data_aug = dict()
+
+    data_aug_values = np.empty([0, len(inputVariableNames)])
+    data_aug_labels = np.array(list())
+    data_aug_encodedLabels = np.empty([0, len(parameters['usedClasses'])])
+    data_aug_weights = np.array(list())
+
+    if change_weights_only:
+
+        for u_cl in parameters['usedClasses']:
+
+            global_scale_factor = max_sum/sums_of_weights[u_cl]
+            tmp = data['weights'][data['labels'] == u_cl]
+            tmp = tmp*global_scale_factor
+            data_aug_weights = np.append(data_aug_weights, tmp)
+
+            data_aug_values = np.concatenate((data_aug_values, data['values'][data['labels'] == u_cl]))
+            data_aug_labels = np.append(data_aug_labels, data['labels'][data['labels'] == u_cl])
+            data_aug_encodedLabels = np.concatenate((data_aug_encodedLabels, data['encodedLabels'][data['labels'] == u_cl]))
+
+        data_aug['values'] = data_aug_values
+        data_aug['labels'] = data_aug_labels
+        data_aug['encodedLabels'] = data_aug_encodedLabels
+        data_aug['weights'] = data_aug_weights
+
+    else: # this will take some minutes! For testing, use change_weights_only=True
+
+        for u_cl in parameters['usedClasses']:
+
+            global_scale_factor = max_sum/sums_of_weights[u_cl]
+
+            data_aug_values_ucl = np.empty([0, len(inputVariableNames)])
+            data_aug_labels_ucl = np.array(list())
+            data_aug_encodedLabels_ucl = np.empty([0, len(parameters['usedClasses'])])
+            data_aug_weights_ucl = np.array(list())
+
+            cardinality_ucl = len(data['values'][data['labels'] == u_cl])
+            overhang = int((global_scale_factor - int(global_scale_factor))*cardinality_ucl)
+
+            for i in range(int(global_scale_factor)):
+                data_aug_values_ucl = np.concatenate((data_aug_values_ucl, data['values'][data['labels'] == u_cl]))
+                data_aug_labels_ucl = np.append(data_aug_labels_ucl, data['labels'][data['labels'] == u_cl])
+                data_aug_encodedLabels_ucl = np.concatenate((data_aug_encodedLabels_ucl, data['encodedLabels'][data['labels'] == u_cl]))
+                data_aug_weights_ucl = np.append(data_aug_weights_ucl, data['weights'][data['labels'] == u_cl])
+
+            data_aug_values_ucl = np.concatenate((data_aug_values_ucl, data['values'][data['labels'] == u_cl][0:overhang]))
+            data_aug_labels_ucl = np.append(data_aug_labels_ucl, data['labels'][data['labels'] == u_cl][0:overhang])
+            data_aug_encodedLabels_ucl = np.concatenate((data_aug_encodedLabels_ucl, data['encodedLabels'][data['labels'] == u_cl][0:overhang]))
+            data_aug_weights_ucl = np.append(data_aug_weights_ucl, data['weights'][data['labels'] == u_cl][0:overhang])
+
+            data_aug_values = np.concatenate((data_aug_values, data_aug_values_ucl))
+            data_aug_labels = np.append(data_aug_labels, data_aug_labels_ucl)
+            data_aug_encodedLabels = np.concatenate((data_aug_encodedLabels, data_aug_encodedLabels_ucl))
+            data_aug_weights = np.append(data_aug_weights, data_aug_weights_ucl)
+
+        data_aug['values'] = data_aug_values
+        data_aug['labels'] = data_aug_labels
+        data_aug['encodedLabels'] = data_aug_encodedLabels
+        data_aug['weights'] = data_aug_weights
+
+    # sanity check whether sum of weights for all classes now approximately equal:
+    print("Sanity check after data augmentation:")
+    for u_cl in parameters['usedClasses']:
+        tmp = data_aug['weights'][data_aug['labels'] == u_cl]
+        sums_of_weights_aug[u_cl] = tmp.sum()
+        print("Sum of weights for non-augm. class "+str(u_cl)+": ", str(sums_of_weights[u_cl]))
+        print("Sum of weights for augmented class "+str(u_cl)+": ", str(sums_of_weights_aug[u_cl]))
+        print("Number of MC events for class "+str(u_cl)+": ", str(len(tmp)))
+
+    return data_aug
+
+
 def define_NetworkArchitecture(parameters):
 
     """Define the NN architecture."""
@@ -229,33 +323,36 @@ def define_NetworkArchitecture(parameters):
     return model
 
 
-def predict_Labels(parameters, model, data_train, data_test, data_validation):
+def predict_Labels(parameters, model, data_train, data_test, data_validation, augmented=False):
 
     """Predict labels of train/test/validation datasets using the trained model."""
 
     predDir = outputDir+'predictions/'
     os.makedirs(predDir, exist_ok=True)
 
+    augPostFix = ''
+    if augmented: augPostFix = '_aug'
+
     print("Predicting labels of training dataset...")
     pred_train = model.predict(data_train['values'])
-    np.save(predDir+'pred_train.npy', pred_train)
+    np.save(predDir+'pred'+augPostFix+'_train.npy', pred_train)
     for u_cl in parameters['usedClasses']:
         tmp = pred_train[data_train['labels'] == u_cl]
-        np.save(predDir+'pred_train__'+str(u_cl)+'.npy', tmp)
+        np.save(predDir+'pred'+augPostFix+'_train__'+str(u_cl)+'.npy', tmp)
 
     print("Predicting labels of test dataset...")
     pred_test = model.predict(data_test['values'])
-    np.save(predDir+'pred_test.npy', pred_test)
+    np.save(predDir+'pred'+augPostFix+'_test.npy', pred_test)
     for u_cl in parameters['usedClasses']:
         tmp = pred_test[data_test['labels'] == u_cl]
-        np.save(predDir+'pred_test__'+str(u_cl)+'.npy', tmp)
+        np.save(predDir+'pred'+augPostFix+'_test__'+str(u_cl)+'.npy', tmp)
 
     print("Predicting labels of validation dataset...")
     pred_validation = model.predict(data_validation['values'])
-    np.save(predDir+'pred_validation.npy', pred_validation)
+    np.save(predDir+'pred'+augPostFix+'_validation.npy', pred_validation)
     for u_cl in parameters['usedClasses']:
         tmp = pred_validation[data_validation['labels'] == u_cl]
-        np.save(predDir+'pred_validation__'+str(u_cl)+'.npy', tmp)
+        np.save(predDir+'pred'+augPostFix+'_validation__'+str(u_cl)+'.npy', tmp)
 
 
 def load_Model():
@@ -288,9 +385,17 @@ def train_NN(parameters):
         seed = seed+1
 
     # get data for Keras usage!
-    data_train = make_DatasetUsableWithKeras(parameters['usedClasses'], 'train')
-    data_test = make_DatasetUsableWithKeras(parameters['usedClasses'], 'test')
-    data_validation = make_DatasetUsableWithKeras(parameters['usedClasses'], 'validation')
+    data_train_raw = make_DatasetUsableWithKeras(parameters['usedClasses'], 'train')
+    data_test_raw = make_DatasetUsableWithKeras(parameters['usedClasses'], 'test')
+    data_validation_raw = make_DatasetUsableWithKeras(parameters['usedClasses'], 'validation')
+
+    # augment all datasets, such that they have equal sum of weights inside loss function!
+    if parameters['augmentation']:
+        data_train = augment_Dataset(parameters, data_train_raw, 'train')
+        data_test = augment_Dataset(parameters, data_test_raw, 'test')
+        data_validation = augment_Dataset(parameters, data_validation_raw, 'validation')
+    else:
+        data_train, data_test, data_validation = data_train_raw, data_test_raw, data_validation_raw
 
     # initialize your own custom history callback in which training set and validation set are evaluated after each epoch in the same way!
     customHistory = AdditionalValidationSets([
@@ -318,7 +423,8 @@ def train_NN(parameters):
     print("Saved model to disk.")
 
     # predict labels of datasets!
-    predict_Labels(parameters, model, data_train, data_test, data_validation)
+    predict_Labels(parameters, model, data_train_raw, data_test_raw, data_validation_raw) # raw datasets
+    predict_Labels(parameters, model, data_train, data_test, data_validation, True) # augmented datasets
 
 
 def dump_ParametersIntoJsonFile(parameters):
