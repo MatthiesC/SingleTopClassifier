@@ -52,17 +52,19 @@ def main():
     os.makedirs(outputDir+'workdir/', exist_ok=True)
 
     parameters = {
+        'binary': True,
+        'binary_signal': 'tW_signal', # define background composition via usedClasses
         #'usedClasses': ['tW_signal', 'tW_other', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
         #'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
         #'usedClasses': ['tW_signal', 'tW_other', 'TTbar', 'WJets', 'DYJets'],
         'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
         'augmentation': True,
-        'change_weights_only': True, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
-        'layers': [16, 16],
-        'dropout': False,
+        'change_weights_only': False, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
+        'layers': [32, 32],
+        'dropout': True,
         'dropout_rate': 0.5,
-        'epochs': 800,
+        'epochs': 300,
         'batch_size': 65536, #65536 #16384
         'learning_rate': 0.001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
@@ -284,32 +286,41 @@ def define_NetworkArchitecture(parameters):
 
     """Define the NN architecture."""
 
-    layers = parameters['layers']
+    layers = parameters.get('layers')
 
     my_kernel_regularizer = None
-    if parameters['regularizer'] == 'l1':
-        my_kernel_regularizer = regularizers.l1(parameters['regularizer_rate'])
-    elif parameters['regularizer'] == 'l2':
-        my_kernel_regularizer = regularizers.l2(parameters['regularizer_rate'])
+    if parameters.get('regularizer') == 'l1':
+        my_kernel_regularizer = regularizers.l1(parameters.get('regularizer_rate'))
+    elif parameters.get('regularizer') == 'l2':
+        my_kernel_regularizer = regularizers.l2(parameters.get('regularizer_rate'))
 
     model = Sequential()
     model.add(Dense(layers[0], input_dim=len(inputVariableNames), kernel_regularizer=my_kernel_regularizer, activation='relu'))
-    #model.add(BatchNormalization())
-    if parameters['dropout']: model.add(Dropout(parameters['dropout_rate']))
+    if parameters.get('dropout'): model.add(Dropout(parameters.get('dropout_rate')))
     for i in range(len(layers)):
         if i == 0: continue
         model.add(Dense(layers[i], activation='relu', kernel_regularizer=my_kernel_regularizer))
-        #model.add(BatchNormalization())
-        if parameters['dropout']: model.add(Dropout(parameters['dropout_rate']))
-    model.add(Dense(len(parameters['usedClasses']), activation='softmax'))
-
-    my_optimizer = optimizers.Adam(lr=parameters['learning_rate'])
-    my_metrics = [metrics.categorical_accuracy]
-    my_loss = None
-    if parameters.get('focal_loss'):
-        my_loss = [categorical_focal_loss(alpha=parameters['focal_alpha'], gamma=parameters['focal_gamma'])]
+        if parameters.get('dropout'): model.add(Dropout(parameters.get('dropout_rate')))
+    if parameters.get('binary'):
+        model.add(Dense(1, activation='sigmoid'))
     else:
-        my_loss = 'categorical_crossentropy'
+        model.add(Dense(len(parameters.get('usedClasses')), activation='softmax'))
+
+    my_optimizer = optimizers.Adam(lr=parameters.get('learning_rate'))
+    my_metrics = None
+    my_loss = None
+    if parameters.get('binary'):
+        my_metrics = [metrics.accuracy]
+        if parameters.get('focal_loss'):
+            my_loss = [binary_focal_loss(alpha=parameters.get('focal_alpha'), gamma=parameters.get('focal_gamma'))]
+        else:
+            my_loss = 'binary_crossentropy'
+    else:
+        my_metrics = [metrics.categorical_accuracy]
+        if parameters.get('focal_loss'):
+            my_loss = [categorical_focal_loss(alpha=parameters.get('focal_alpha'), gamma=parameters.get('focal_gamma'))]
+        else:
+            my_loss = 'categorical_crossentropy'
 
     model.compile(loss=my_loss, optimizer=my_optimizer, metrics=my_metrics)
 
