@@ -29,9 +29,6 @@ from datetime import datetime
 
 ### global variables
 
-inputVariableNames = (compileInputList())[:,0]
-print("Using these input variables:", inputVariableNames)
-
 # use a time tag to identify trained models later (for details, look up the parameters.json in the output dir)
 timeTag = datetime.now()
 timeTag = timeTag.strftime('%y-%m-%d-%H-%M-%S')
@@ -71,8 +68,11 @@ def main():
         'regularizer_rate': 0.01,
         'focal_loss': False,
         'focal_alpha': 0.25,
-        'focal_gamma': 4.0
+        'focal_gamma': 4.0,
+        'inputVariableNames': (compileInputList())[:,0]
     }
+
+    print("Using these input variables:", parameters.get('inputVariableNames'))
 
     dump_ParametersIntoJsonFile(parameters)
     train_NN(parameters)
@@ -146,7 +146,7 @@ def prepare_Dataset(used_classes, sample_type, inputSuffix='_norm'): # sample_ty
 
         fileName = outputDir+'workdir/'+u_cl+inputSuffix+'_'+sample_type+'.npy'
         dataArray = np.load(fileName)
-        dataFrame = pd.DataFrame(data=dataArray, columns=inputVariableNames)
+        dataFrame = pd.DataFrame(data=dataArray, columns=parameters.get('inputVariableNames'))
 
         fileNameWeights = outputDir+'workdir/'+u_cl+'_weights_'+sample_type+'.npy'
         weightsArray = np.load(fileNameWeights)
@@ -212,7 +212,7 @@ def augment_Dataset(parameters, data, sample_type): # change_weights_only: only 
 
     data_aug = dict()
 
-    data_aug_values = np.empty([0, len(inputVariableNames)])
+    data_aug_values = np.empty([0, len(parameters.get('inputVariableNames'))])
     data_aug_labels = np.array(list())
     data_aug_encodedLabels = np.empty([0, len(parameters.get('usedClasses'))])
     data_aug_weights = np.array(list())
@@ -241,7 +241,7 @@ def augment_Dataset(parameters, data, sample_type): # change_weights_only: only 
 
             global_scale_factor = max_sum/sums_of_weights[u_cl]
 
-            data_aug_values_ucl = np.empty([0, len(inputVariableNames)])
+            data_aug_values_ucl = np.empty([0, len(parameters.get('inputVariableNames'))])
             data_aug_labels_ucl = np.array(list())
             data_aug_encodedLabels_ucl = np.empty([0, len(parameters.get('usedClasses'))])
             data_aug_weights_ucl = np.array(list())
@@ -295,7 +295,7 @@ def define_NetworkArchitecture(parameters):
         my_kernel_regularizer = regularizers.l2(parameters.get('regularizer_rate'))
 
     model = Sequential()
-    model.add(Dense(layers[0], input_dim=len(inputVariableNames), kernel_regularizer=my_kernel_regularizer, activation='relu'))
+    model.add(Dense(layers[0], input_dim=len(parameters.get('inputVariableNames')), kernel_regularizer=my_kernel_regularizer, activation='relu'))
     if parameters.get('dropout'): model.add(Dropout(parameters.get('dropout_rate')))
     for i in range(len(layers)):
         if i == 0: continue
