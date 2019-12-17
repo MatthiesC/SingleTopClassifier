@@ -51,13 +51,10 @@ def main():
     parameters = {
         'binary': True,
         'binary_signal': 'tW_signal', # define background composition via usedClasses
-        #'usedClasses': ['tW_signal', 'tW_other', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
-        #'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'tChannel', 'sChannel', 'TTbar', 'WJets', 'DYJets', 'Diboson', 'QCD'],
-        #'usedClasses': ['tW_signal', 'tW_other', 'TTbar', 'WJets', 'DYJets'],
         'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
         'augmentation': True,
-        'change_weights_only': False, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
+        'augment_weights_only': False, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
         'layers': [32, 32],
         'dropout': True,
         'dropout_rate': 0.5,
@@ -190,13 +187,13 @@ def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm'):
     return result
 
 
-def augment_Dataset(parameters, data, sample_type): # change_weights_only: only change the sample weights such that each class has the same sum of weights, do not perform an actual augmentation of the dataset
+def augment_Dataset(parameters, data, sample_type):
 
     """Augments underrepresented classes in a given dataset up to sums of weights of the class with the highest sum of weights."""
 
     print("Augmenting "+str(sample_type)+" data...")
 
-    change_weights_only = parameters.get('change_weights_only')
+    augment_weights_only = parameters.get('augment_weights_only')
 
     sums_of_weights = dict()
     sums_of_weights_aug = dict()
@@ -217,7 +214,7 @@ def augment_Dataset(parameters, data, sample_type): # change_weights_only: only 
     data_aug_encodedLabels = np.empty([0, len(parameters.get('usedClasses'))])
     data_aug_weights = np.array(list())
 
-    if change_weights_only:
+    if augment_weights_only:
 
         for u_cl in parameters.get('usedClasses'):
 
@@ -235,7 +232,7 @@ def augment_Dataset(parameters, data, sample_type): # change_weights_only: only 
         data_aug['encodedLabels'] = data_aug_encodedLabels
         data_aug['weights'] = data_aug_weights
 
-    else: # this will take some minutes! For testing, use change_weights_only=True
+    else: # this will take some minutes! For testing, use augment_weights_only=True
 
         for u_cl in parameters.get('usedClasses'):
 
