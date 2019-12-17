@@ -12,7 +12,7 @@ import tensorflow as tf
 
 from keras.utils import np_utils
 from keras.models import Sequential, model_from_json
-from keras.layers import Dense, BatchNormalization, Dropout
+from keras.layers import Dense, Dropout
 from keras import optimizers
 from keras import metrics
 from keras import regularizers
@@ -307,7 +307,7 @@ def define_NetworkArchitecture(parameters):
     my_metrics = None
     my_loss = None
     if parameters.get('binary'):
-        my_metrics = [metrics.accuracy]
+        my_metrics = [metrics.binary_accuracy]
         if parameters.get('focal_loss'):
             my_loss = [binary_focal_loss(alpha=parameters.get('focal_alpha'), gamma=parameters.get('focal_gamma'))]
         else:
