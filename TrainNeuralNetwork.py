@@ -10,7 +10,7 @@ import json
 
 import tensorflow as tf
 
-from keras.utils import np_utils
+from keras.utils import np_utils, plot_model
 from keras.models import Sequential, model_from_json
 from keras.layers import Dense, Dropout
 from keras import optimizers
@@ -325,8 +325,7 @@ def define_NetworkArchitecture(parameters):
     architecture = model.to_json()
     with open(outputDir+'model_arch.json', 'w') as f:
         f.write(architecture)
-
-    print("Neural network architecture SUMMARY:\n", model.summary())
+    plot_model(model, to_file=outputDir+'model_arch.png')
 
     return model
 
