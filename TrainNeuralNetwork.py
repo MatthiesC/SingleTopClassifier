@@ -54,11 +54,11 @@ def main():
         'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
         'augmentation': True,
-        'augment_weights_only': False, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
-        'layers': [32, 32],
+        'augment_weights_only': True, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
+        'layers': [32, 32, 32, 32],
         'dropout': True,
-        'dropout_rate': 0.5,
-        'epochs': 300,
+        'dropout_rate': 0.75,
+        'epochs': 500,
         'batch_size': 65536, #65536 #16384
         'learning_rate': 0.001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
@@ -66,7 +66,7 @@ def main():
         'focal_loss': False,
         'focal_alpha': 0.25,
         'focal_gamma': 4.0,
-        'inputVariableNames': (compileInputList())[:,0]
+        'inputVariableNames': ((compileInputList())[:,0]).tolist()
     }
 
     print("Using these input variables:", parameters.get('inputVariableNames'))
@@ -133,13 +133,13 @@ def split_TrainTestValidation(processName, percentTrain, percentTest, percentVal
     return fileNames
 
 
-def prepare_Dataset(used_classes, sample_type, inputSuffix='_norm'): # sample_type = 'train', 'test', or 'validation'
+def prepare_Dataset(parameters, sample_type, inputSuffix='_norm'): # sample_type = 'train', 'test', or 'validation'
 
     """Returns a gigantic pandas dataframe, containing all events to be trained/tested/validated on."""
 
     listOfDataFrames = []
 
-    for u_cl in used_classes:
+    for u_cl in parameters.get('usedClasses'):
 
         fileName = outputDir+'workdir/'+u_cl+inputSuffix+'_'+sample_type+'.npy'
         dataArray = np.load(fileName)
@@ -158,7 +158,7 @@ def prepare_Dataset(used_classes, sample_type, inputSuffix='_norm'): # sample_ty
     return completeDataFrame
 
 
-def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm'): # sample_type = 'train', 'test', or 'validation'
+def make_DatasetUsableWithKeras(parameters, sample_type, inputSuffix='_norm'): # sample_type = 'train', 'test', or 'validation'
 
     """Returns a dictionary containing data values, string labels, and encoded labels which can directly be used with the model.fit() function of Keras."""
 
@@ -166,21 +166,29 @@ def make_DatasetUsableWithKeras(used_classes, sample_type, inputSuffix='_norm'):
     # https://machinelearningmastery.com/multi-class-classification-tutorial-keras-deep-learning-library/
 
     # load dataset
-    data = prepare_Dataset(used_classes, sample_type, inputSuffix).values
+    data = prepare_Dataset(parameters, sample_type, inputSuffix).values
     data_values = data[:,0:-2] # input vectors for NN
     data_labels = data[:,-1] # classes associated to each event, given in string format
     data_weights = data[:,-2] # event weights
 
     # encode class values as integers
-    encoder = LabelEncoder()
-    encoder.fit(data_labels)
-    print('Used classes (order used for the encoding of output node numbers, i.e. node 0 corresponds to the first entry in this list here):')
-    print(encoder.classes_)
-    np.save(outputDir+'encoder_classes.npy', (np.array(encoder.classes_)).astype(str)) # conversion to str format needed to avoid 'Object arrays cannot be loaded when allow_pickle=False' error
-    encoded_data_labels = encoder.transform(data_labels)
+    data_encodedLabels = None
+    if parameters.get('binary'):
+        print('Binary mode chosen. Going to use this signal class:', parameters.get('binary_signal'))
+        # data_encodedLabels = [0, 0, 1, 0, 1, 1, 0, ...] where 0 are samples which do not have label of binary signal
+        data_encodedLabels = np.zeros(len(data_labels))
+        data_encodedLabels[data_labels == parameters.get('binary_signal')] = 1
+    else:
+        print('Categorical mode chosen.')
+        encoder = LabelEncoder()
+        encoder.fit(data_labels)
+        print('Used classes (order used for the encoding of output node numbers, i.e. node 0 corresponds to the first entry in this list here):')
+        print(encoder.classes_)
+        np.save(outputDir+'encoder_classes.npy', (np.array(encoder.classes_)).astype(str)) # conversion to str format needed to avoid 'Object arrays cannot be loaded when allow_pickle=False' error
+        encoded_data_labels = encoder.transform(data_labels)
 
-    # convert integers to dummy values (i.e. one hot encoded)
-    data_encodedLabels = np_utils.to_categorical(encoded_data_labels)
+        # convert integers to dummy values (i.e. one-hot-encoded)
+        data_encodedLabels = np_utils.to_categorical(encoded_data_labels)
 
     result = {"values": data_values, "labels": data_labels, "encodedLabels": data_encodedLabels, "weights": data_weights}
 
@@ -194,11 +202,14 @@ def augment_Dataset(parameters, data, sample_type):
     print("Augmenting "+str(sample_type)+" data...")
 
     augment_weights_only = parameters.get('augment_weights_only')
+    binary = parameters.get('binary')
+    signal = parameters.get('binary_signal')
 
     sums_of_weights = dict()
     sums_of_weights_aug = dict()
     max_sum = 0.
     max_ucl = ''
+    sum_bkg = 0 # for binary case
 
     for u_cl in parameters.get('usedClasses'):
         tmp = data['weights'][data['labels'] == u_cl]
@@ -206,26 +217,51 @@ def augment_Dataset(parameters, data, sample_type):
         if tmp.sum() > max_sum:
             max_sum = tmp.sum()
             max_ucl = u_cl
+        if binary:
+            if u_cl != signal:
+                sum_bkg += tmp.sum()
+
+    # for binary case:
+    augment_signal = False
+    if sum_bkg > sums_of_weights.get(signal):
+        augment_signal = True
 
     data_aug = dict()
 
     data_aug_values = np.empty([0, len(parameters.get('inputVariableNames'))])
     data_aug_labels = np.array(list())
-    data_aug_encodedLabels = np.empty([0, len(parameters.get('usedClasses'))])
     data_aug_weights = np.array(list())
+    data_aug_encodedLabels = None
+    if binary:
+        data_aug_encodedLabels = np.array(list())
+    else:
+        data_aug_encodedLabels = np.empty([0, len(parameters.get('usedClasses'))])
 
     if augment_weights_only:
 
         for u_cl in parameters.get('usedClasses'):
 
-            global_scale_factor = max_sum/sums_of_weights[u_cl]
+            global_scale_factor = 1
+            if binary:
+                if augment_signal:
+                    if u_cl == signal:
+                        global_scale_factor = sum_bkg/sums_of_weights.get(signal)
+                else:
+                    if u_cl != signal:
+                        global_scale_factor = sums_of_weights.get(signal)/sum_bkg
+            else:
+                global_scale_factor = max_sum/sums_of_weights[u_cl]
+
             tmp = data['weights'][data['labels'] == u_cl]
             tmp = tmp*global_scale_factor
             data_aug_weights = np.append(data_aug_weights, tmp)
 
             data_aug_values = np.concatenate((data_aug_values, data['values'][data['labels'] == u_cl]))
             data_aug_labels = np.append(data_aug_labels, data['labels'][data['labels'] == u_cl])
-            data_aug_encodedLabels = np.concatenate((data_aug_encodedLabels, data['encodedLabels'][data['labels'] == u_cl]))
+            if binary:
+                data_aug_encodedLabels = np.append(data_aug_encodedLabels, data['encodedLabels'][data['labels'] == u_cl])
+            else:
+                data_aug_encodedLabels = np.concatenate((data_aug_encodedLabels, data['encodedLabels'][data['labels'] == u_cl]))
 
         data_aug['values'] = data_aug_values
         data_aug['labels'] = data_aug_labels
@@ -392,9 +428,9 @@ def train_NN(parameters):
         seed = seed+1
 
     # get data for Keras usage!
-    data_train_raw = make_DatasetUsableWithKeras(parameters.get('usedClasses'), 'train')
-    data_test_raw = make_DatasetUsableWithKeras(parameters.get('usedClasses'), 'test')
-    data_validation_raw = make_DatasetUsableWithKeras(parameters.get('usedClasses'), 'validation')
+    data_train_raw = make_DatasetUsableWithKeras(parameters, 'train')
+    data_test_raw = make_DatasetUsableWithKeras(parameters, 'test')
+    data_validation_raw = make_DatasetUsableWithKeras(parameters, 'validation')
 
     # augment all datasets, such that they have equal sum of weights inside loss function!
     if parameters.get('augmentation'):
