@@ -7,7 +7,7 @@ output     = outputs/job_outputs/$(Cluster)_$(Process).out
 error      = outputs/job_outputs/$(Cluster)_$(Process).err
 
 Requirements = (OpSysAndVer == "CentOS7" && CUDADeviceName == "GeForce GTX 1080 Ti")
-Request_GPU = 1
+Request_GPUs = 1
 +RequestRuntime = 86400
 
 notification = Always
