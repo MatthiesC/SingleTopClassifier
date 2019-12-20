@@ -57,7 +57,7 @@ def main():
         'augment_weights_only': True, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
         'layers': [32, 32],
         'dropout': True,
-        'dropout_rate': 0.65,
+        'dropout_rate': 0.55,
         'epochs': 500,
         'batch_size': 65536, #65536 #16384
         'learning_rate': 0.001, #Adam default: 0.001

@@ -217,7 +217,7 @@ def plot_PredictionTrainVSTest(dnnTag):
     parameters = get_Parameters(dnnTag)
     data = load_Predictions(dnnTag)
 
-    if parameters.get('binary'):
+    if parameters.get('binary'): # make another plot in which you stack all backgrounds such that it is indeed only signal vs. background KS test
 
         plt.clf()
         fig, ax = plt.subplots()
@@ -297,7 +297,7 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
             w.append(data[dataset_type][u_cl]['weights']*norm_factor)
             colors.append(dict_Classes[u_cl]['color'])
 
-        plt.hist(x, bins=20, weights=w, stacked=True, range=(0,1), label=cl, color=colors)
+        plt.hist(x, bins=50, weights=w, stacked=True, range=(0,1), label=cl, color=colors)
 
         plt.legend(loc='upper center', fontsize=5, ncol=2)
         plt.xlabel('NN output')
