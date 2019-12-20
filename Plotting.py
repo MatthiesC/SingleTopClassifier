@@ -237,7 +237,7 @@ def plot_PredictionTrainVSTest(dnnTag):
         insert_dnnTag(ax, dnnTag)
         insert_CMS(ax)
 
-        saveFile = './outputs/'+dnnTag+'/plots/predictions_KStest_'+dataset_type+'_NNoutput.pdf'
+        saveFile = './outputs/'+dnnTag+'/plots/predictions_KStest.pdf'
         fig.savefig(saveFile)
         plt.close()
 
