@@ -55,9 +55,9 @@ def main():
         'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
         'augmentation': True,
         'augment_weights_only': True, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
-        'layers': [32, 32, 32, 32],
+        'layers': [32, 32],
         'dropout': True,
-        'dropout_rate': 0.75,
+        'dropout_rate': 0.65,
         'epochs': 500,
         'batch_size': 65536, #65536 #16384
         'learning_rate': 0.001, #Adam default: 0.001

@@ -62,9 +62,15 @@ def plot_Loss(dnnTag):
     plt.ylim(bottom=0.00)
     ylabel = None
     if parameters.get('focal_loss'):
-        ylabel = 'Categorical focal loss'
+        if parameters.get('binary'):
+            ylabel = 'Binary focal loss'
+        else:
+            ylabel = 'Categorical focal loss'
     else:
-        ylabel = 'Loss (categorical crossentropy)'
+        if parameters.get('binary'):
+            ylabel = 'Loss (binary crossentropy)'
+        else:
+            ylabel = 'Loss (categorical crossentropy)'
     plt.ylabel(ylabel)
     plt.xlabel('Number of training epochs')
     
@@ -88,20 +94,31 @@ def plot_Metrics(dnnTag):
     pickleFileCustom = './outputs/'+dnnTag+'/model_customHistory.pkl'
     with open(pickleFileCustom, 'rb') as f:
         model_customHistory = pickle.load(f)
-    
+
+    parameters = get_Parameters(dnnTag)
+
     plt.clf()
     fig, ax = plt.subplots()
     plt.grid()
-    x = (range(len(model_customHistory['train_categorical_accuracy'])+1))[1:]
-    plt.plot(x, model_customHistory['train_categorical_accuracy'], label='Training set')
-    plt.plot(x, model_history['val_categorical_accuracy'], label='Validation set', linestyle='--')
+    if parameters.get('binary'):
+        x = (range(len(model_customHistory['train_binary_accuracy'])+1))[1:]
+        plt.plot(x, model_customHistory['train_binary_accuracy'], label='Training set')
+        plt.plot(x, model_history['val_binary_accuracy'], label='Validation set', linestyle='--')
+        plt.ylabel('Binary accuracy')
+    else:
+        x = (range(len(model_customHistory['train_categorical_accuracy'])+1))[1:]
+        plt.plot(x, model_customHistory['train_categorical_accuracy'], label='Training set')
+        plt.plot(x, model_history['val_categorical_accuracy'], label='Validation set', linestyle='--')
+        plt.ylabel('Categorical accuracy')
     plt.legend(loc='lower right')
     plt.ylim([0.00, 1.00])
-    plt.ylabel('Categorical accuracy')
     plt.xlabel('Number of training epochs')
 
     insert_dnnTag(ax, dnnTag)
-    insert_InfoBox(ax, model_customHistory, model_history, 'categorical_accuracy')
+    if parameters.get('binary'):
+        insert_InfoBox(ax, model_customHistory, model_history, 'binary_accuracy')
+    else:
+        insert_InfoBox(ax, model_customHistory, model_history, 'categorical_accuracy')
     insert_CMS(ax)
 
     saveFile = './outputs/'+dnnTag+'/plots/accuracy.pdf'
@@ -130,7 +147,10 @@ def load_Predictions(dnnTag):  # type=train/test/validation
             result[dataset_type][u_cl] = dict()
             tmp = np.load(predDir+'pred_'+dataset_type+'__'+u_cl+'.npy')
             tmp_weights = np.load('./outputs/'+dnnTag+'/workdir/'+u_cl+'_weights_'+dataset_type+'.npy')
-            result[dataset_type][u_cl]['predictions'] = tmp
+            if parameters.get('binary'):
+                result[dataset_type][u_cl]['predictions'] = tmp.flatten()
+            else:
+                result[dataset_type][u_cl]['predictions'] = tmp
             result[dataset_type][u_cl]['weights'] = tmp_weights.flatten()
     
     return result
@@ -143,26 +163,49 @@ def plot_PredictionsNormalized(dnnTag, dataset_type):  # dataset_type = train/te
     parameters = get_Parameters(dnnTag)
     data = load_Predictions(dnnTag)
 
-    for i in range(len(parameters['usedClasses'])):
+    if parameters.get('binary'):
 
         plt.clf()
         fig, ax = plt.subplots()
 
-        for u_cl in reversed(parameters['usedClasses']):
-            x = data[dataset_type][u_cl]['predictions'][:,i]
+        for u_cl in reversed(parameters.get('usedClasses')):
+            x = data[dataset_type][u_cl]['predictions']
             w = data[dataset_type][u_cl]['weights']
             plt.hist(x, bins=100, weights=w, density=True, histtype='step', range=(0,1), label=u_cl, color=dict_Classes[u_cl]['color'])
 
         plt.legend(loc='upper center', fontsize=5, ncol=2)
-        plt.xlabel('NN output node '+str(i))
+        plt.xlabel('NN output')
         plt.ylabel('Normalized number of events [a. u.]')
 
         insert_dnnTag(ax, dnnTag)
         insert_CMS(ax)
-    
-        saveFile = './outputs/'+dnnTag+'/plots/predictions_'+dataset_type+'_node'+str(i)+'.pdf'
+
+        saveFile = './outputs/'+dnnTag+'/plots/predictions_'+dataset_type+'_NNoutput.pdf'
         fig.savefig(saveFile)
         plt.close()
+
+    else:
+
+        for i in range(len(parameters.get('usedClasses'))):
+
+            plt.clf()
+            fig, ax = plt.subplots()
+
+            for u_cl in reversed(parameters.get('usedClasses')):
+                x = data[dataset_type][u_cl]['predictions'][:,i]
+                w = data[dataset_type][u_cl]['weights']
+                plt.hist(x, bins=100, weights=w, density=True, histtype='step', range=(0,1), label=u_cl, color=dict_Classes[u_cl]['color'])
+
+            plt.legend(loc='upper center', fontsize=5, ncol=2)
+            plt.xlabel('NN output node '+str(i))
+            plt.ylabel('Normalized number of events [a. u.]')
+
+            insert_dnnTag(ax, dnnTag)
+            insert_CMS(ax)
+
+            saveFile = './outputs/'+dnnTag+'/plots/predictions_'+dataset_type+'_node'+str(i)+'.pdf'
+            fig.savefig(saveFile)
+            plt.close()
 
 
 def plot_PredictionTrainVSTest(dnnTag):
@@ -174,29 +217,55 @@ def plot_PredictionTrainVSTest(dnnTag):
     parameters = get_Parameters(dnnTag)
     data = load_Predictions(dnnTag)
 
-    for i in range(len(parameters['usedClasses'])):
+    if parameters.get('binary'):
 
         plt.clf()
         fig, ax = plt.subplots()
 
-        for u_cl in reversed(parameters['usedClasses']):
-            x_train = data['train'][u_cl]['predictions'][:,i]
-            w_train = data['train'][u_cl]['weights']
-            plt.hist(x_train, bins=100, weights=w_train, density=True, histtype='step', range=(0,1), label=u_cl, color=dict_Classes[u_cl]['color'])
-            x_test = data['test'][u_cl]['predictions'][:,i]
-            w_test = data['test'][u_cl]['weights']
-            plt.hist(x_test, bins=100, weights=w_test, density=True, histtype='step', range=(0,1), label=u_cl+' test', color=dict_Classes[u_cl]['color'], linestyle='--')
-        
+        for u_cl in reversed(parameters.get('usedClasses')):
+                x_train = data['train'][u_cl]['predictions']
+                w_train = data['train'][u_cl]['weights']
+                plt.hist(x_train, bins=100, weights=w_train, density=True, histtype='step', range=(0,1), label=u_cl, color=dict_Classes[u_cl]['color'])
+                x_test = data['test'][u_cl]['predictions']
+                w_test = data['test'][u_cl]['weights']
+                plt.hist(x_test, bins=100, weights=w_test, density=True, histtype='step', range=(0,1), label=u_cl+' test', color=dict_Classes[u_cl]['color'], linestyle='--')
+
         plt.legend(loc='upper center', fontsize=5, ncol=2)
-        plt.xlabel('NN output node '+str(i))
+        plt.xlabel('NN output')
         plt.ylabel('Normalized number of events [a. u.]')
 
         insert_dnnTag(ax, dnnTag)
         insert_CMS(ax)
-        
-        saveFile = './outputs/'+dnnTag+'/plots/predictions_KStest_node'+str(i)+'.pdf'
+
+        saveFile = './outputs/'+dnnTag+'/plots/predictions_KStest_'+dataset_type+'_NNoutput.pdf'
         fig.savefig(saveFile)
         plt.close()
+
+    else:
+
+        for i in range(len(parameters.get('usedClasses'))):
+
+            plt.clf()
+            fig, ax = plt.subplots()
+
+            for u_cl in reversed(parameters.get('usedClasses')):
+                x_train = data['train'][u_cl]['predictions'][:,i]
+                w_train = data['train'][u_cl]['weights']
+                plt.hist(x_train, bins=100, weights=w_train, density=True, histtype='step', range=(0,1), label=u_cl, color=dict_Classes[u_cl]['color'])
+                x_test = data['test'][u_cl]['predictions'][:,i]
+                w_test = data['test'][u_cl]['weights']
+                plt.hist(x_test, bins=100, weights=w_test, density=True, histtype='step', range=(0,1), label=u_cl+' test', color=dict_Classes[u_cl]['color'], linestyle='--')
+
+            plt.legend(loc='upper center', fontsize=5, ncol=2)
+            plt.xlabel('NN output node '+str(i))
+            plt.ylabel('Normalized number of events [a. u.]')
+
+            insert_dnnTag(ax, dnnTag)
+            insert_CMS(ax)
+
+            saveFile = './outputs/'+dnnTag+'/plots/predictions_KStest_node'+str(i)+'.pdf'
+            fig.savefig(saveFile)
+            plt.close()
 
 
 def plot_PredictionsStacked(dnnTag, dataset_type):
@@ -205,9 +274,9 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
 
     parameters = get_Parameters(dnnTag)
     data = load_Predictions(dnnTag)
-    
-    for i in range(len(parameters['usedClasses'])):
-        
+
+    if parameters.get('binary'):
+
         plt.clf()
         fig, ax = plt.subplots()
 
@@ -215,8 +284,8 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
         w = list()
         cl = list()
         colors = list()
-        for u_cl in reversed(parameters['usedClasses']):
-            tmp_x = data[dataset_type][u_cl]['predictions'][:,i]
+        for u_cl in reversed(parameters.get('usedClasses')):
+            tmp_x = data[dataset_type][u_cl]['predictions']
             x.append(tmp_x)
             norm_factor = None
             if u_cl == 'TTbar':
@@ -228,18 +297,55 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
             w.append(data[dataset_type][u_cl]['weights']*norm_factor)
             colors.append(dict_Classes[u_cl]['color'])
 
-        plt.hist(x, bins=50, weights=w, stacked=True, range=(0,1), label=cl, color=colors)
+        plt.hist(x, bins=20, weights=w, stacked=True, range=(0,1), label=cl, color=colors)
 
         plt.legend(loc='upper center', fontsize=5, ncol=2)
-        plt.xlabel('NN output node '+str(i))
+        plt.xlabel('NN output')
         plt.ylabel('Number of events')
 
         insert_dnnTag(ax, dnnTag)
         insert_CMS(ax)
-    
-        saveFile = './outputs/'+dnnTag+'/plots/predictions_'+dataset_type+'_node'+str(i)+'_stacked.pdf'
+
+        saveFile = './outputs/'+dnnTag+'/plots/predictions_'+dataset_type+'_NNoutput_stacked.pdf'
         fig.savefig(saveFile)
         plt.close()
+
+    else:
+
+        for i in range(len(parameters.get('usedClasses'))):
+
+            plt.clf()
+            fig, ax = plt.subplots()
+
+            x = list()
+            w = list()
+            cl = list()
+            colors = list()
+            for u_cl in reversed(parameters.get('usedClasses')):
+                tmp_x = data[dataset_type][u_cl]['predictions'][:,i]
+                x.append(tmp_x)
+                norm_factor = None
+                if u_cl == 'TTbar':
+                    norm_factor = 0.784 ### highly dependent on phase space / selection !!!
+                    cl.append(u_cl+' x'+str(norm_factor))
+                else:
+                    norm_factor = 1.0
+                    cl.append(u_cl)
+                w.append(data[dataset_type][u_cl]['weights']*norm_factor)
+                colors.append(dict_Classes[u_cl]['color'])
+
+            plt.hist(x, bins=50, weights=w, stacked=True, range=(0,1), label=cl, color=colors)
+
+            plt.legend(loc='upper center', fontsize=5, ncol=2)
+            plt.xlabel('NN output node '+str(i))
+            plt.ylabel('Number of events')
+
+            insert_dnnTag(ax, dnnTag)
+            insert_CMS(ax)
+
+            saveFile = './outputs/'+dnnTag+'/plots/predictions_'+dataset_type+'_node'+str(i)+'_stacked.pdf'
+            fig.savefig(saveFile)
+            plt.close()
 
 
 def plot_ROC(dnnTag, dataset_type):
@@ -248,28 +354,40 @@ def plot_ROC(dnnTag, dataset_type):
 
     parameters = get_Parameters(dnnTag)
     data = load_Predictions(dnnTag)
-    node_names = np.load('./outputs/'+dnnTag+'/encoder_classes.npy')
+    node_names = None
+    if not parameters.get('binary'): # file does not exist in binary case
+        node_names = np.load('./outputs/'+dnnTag+'/encoder_classes.npy')
 
     plt.clf()
     fig, ax = plt.subplots()
 
     plt.plot([0,1], [0,1], color='black', linestyle='--')
 
-    for process in parameters['usedClasses']: # loop over output class nodes
+    loop_list = None
+    if parameters.get('binary'):
+        loop_list = [parameters.get('binary_signal')]
+    else:
+        loop_list = parameters.get('usedClasses')
+
+    for process in loop_list: # loop over output class nodes; 'process' is the signal for which a ROC curve will be plotted
 
         node_id = None
-        for node in range(len(node_names)):
-            if node_names[node] == process:
-                node_id = node
-                print("Node ID for class "+process+":", node_id)
-                break
+        if not parameters.get('binary'):
+            for node in range(len(node_names)):
+                if node_names[node] == process:
+                    node_id = node
+                    print("Node ID for class "+process+":", node_id)
+                    break
 
         y_score_list = list()
         y_true_list = list()
         weights_list = list()
 
-        for u_cl in parameters['usedClasses']:
-            y_score_list.append(data[dataset_type][u_cl]['predictions'][:,node_id])
+        for u_cl in parameters.get('usedClasses'):
+            if parameters.get('binary'):
+                y_score_list.append(data[dataset_type][u_cl]['predictions'])
+            else:
+                y_score_list.append(data[dataset_type][u_cl]['predictions'][:,node_id])
             weights_list.append(data[dataset_type][u_cl]['weights'])
             if u_cl == process:
                 y_true_list.append(np.ones(len(data[dataset_type][u_cl]['weights']), dtype=int))
@@ -287,10 +405,12 @@ def plot_ROC(dnnTag, dataset_type):
         label = process+" (AUC = %.3f)" % roc_area
         plt.plot(fpr, tpr, color=dict_Classes[process]['color'], label=label)
 
+
+
     plt.grid()
     plt.legend(loc='lower right', fontsize=8)
     plt.xlabel("Background efficieny")
-    plt.ylabel("Signal class efficiency")
+    plt.ylabel("Signal efficiency")
     plt.xlim(0, 1)
     plt.ylim(0, 1)
 
