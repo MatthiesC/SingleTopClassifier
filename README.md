@@ -10,9 +10,9 @@ Repository for DNN studies for the highly boosted tW measurement using Keras/Ten
 * Adjust `./config/InputDefinition.py` to your needs. It should be consistent with the `./src/DNNSetup.cxx` script in the [HighPtSingleTop repository](https://github.com/MatthiesC/HighPtSingleTop)
 * Do `python GetInputs.py`. A `./workdir` will be created automatically if not existing. It will contain `.npy` files storing all possible DNN input variables as defined in `./config/InputDefinition.py`
 * Adjust DNN hyperparameters and architecture in `TrainNeuralNetwork.py`
-* Do `chmod +x ./job.sh`
 * Submit job to HTCondor via `condor_submit job.submit`
 
+* Caveat: If you decided to use the Maxwell cluster instead... install your own conda environment as described on the page linked above and finally use `sbtach sbatch_job.sh`
 
 ## Other configuration
 
