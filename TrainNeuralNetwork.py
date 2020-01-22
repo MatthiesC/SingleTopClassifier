@@ -52,15 +52,15 @@ def main():
         'binary': True,
         'binary_signal': 'tW_signal', # define background composition via usedClasses
         'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
-        'splits': { 'train': 0.6, 'test': 0.2, 'validation': 0.2 },
+        'splits': { 'train': 0.7, 'test': 0.15, 'validation': 0.15 },
         'augmentation': True,
         'augment_weights_only': True, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
-        'layers': [32, 32],
+        'layers': [64, 64],
         'dropout': True,
-        'dropout_rate': 0.55,
-        'epochs': 500,
-        'batch_size': 65536, #65536 #16384
-        'learning_rate': 0.001, #Adam default: 0.001
+        'dropout_rate': 0.25,
+        'epochs': 800,
+        'batch_size': 1024, #65536 #16384
+        'learning_rate': 0.0001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
         'regularizer_rate': 0.01,
         'focal_loss': False,
