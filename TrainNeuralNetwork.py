@@ -18,7 +18,7 @@ from keras import metrics
 from keras import regularizers
 from keras.callbacks import ModelCheckpoint
 from CustomCallback import AdditionalValidationSets
-from CustomLosses import categorical_focal_loss
+from CustomLosses import categorical_focal_loss, binary_focal_loss
 from Plotting import get_Parameters
 
 from sklearn.preprocessing import LabelEncoder
@@ -52,20 +52,22 @@ def main():
         'binary': True,
         'binary_signal': 'tW_signal', # define background composition via usedClasses
         'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
+        #'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar'],
+        #'usedClasses': ['tW_signal', 'TTbar'],
         'splits': { 'train': 0.7, 'test': 0.15, 'validation': 0.15 },
         'augmentation': True,
         'augment_weights_only': True, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
         'layers': [64, 64],
         'dropout': True,
-        'dropout_rate': 0.25,
-        'epochs': 800,
+        'dropout_rate': 0.5,
+        'epochs': 500,
         'batch_size': 1024, #65536 #16384
         'learning_rate': 0.0001, #Adam default: 0.001
         'regularizer': '', # either 'l1' or 'l2' or just ''
         'regularizer_rate': 0.01,
-        'focal_loss': False,
+        'focal_loss': True,
         'focal_alpha': 0.25,
-        'focal_gamma': 4.0,
+        'focal_gamma': 2.0,
         'inputVariableNames': ((compileInputList())[:,0]).tolist()
     }
 
