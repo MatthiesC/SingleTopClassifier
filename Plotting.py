@@ -4,12 +4,16 @@ import matplotlib.pyplot as plt
 
 from config.SampleClasses import dict_Classes
 from sklearn.metrics import roc_curve, auc
+from scipy import stats
+from ROOT import TH1F
+from decimal import Decimal
 
 import sys
 import os
 import pickle
 import numpy as np
 import json
+import math
 
 
 def insert_CMS(axisObject):
@@ -35,7 +39,7 @@ def insert_InfoBox(axisObject, customHist, kerasHist, plot_type='loss', n_last_e
         r'Training set: $%.3f \pm %.3f$ %%' % (100*train_x.mean(), 100*train_x.std(), ),
         r'Validation set: $%.3f \pm %.3f$ %%' % (100*valid_x.mean(), 100*valid_x.std(), )))
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-    axisObject.text(0.5, 0.5, textstr, transform=axisObject.transAxes, bbox=props)
+    axisObject.text(0.5, 0.3, textstr, transform=axisObject.transAxes, bbox=props)
 
 
 def plot_Loss(dnnTag):
@@ -217,22 +221,59 @@ def plot_PredictionTrainVSTest(dnnTag):
     parameters = get_Parameters(dnnTag)
     data = load_Predictions(dnnTag)
 
+    nbins = 20
+
     if parameters.get('binary'): # make another plot in which you stack all backgrounds such that it is indeed only signal vs. background KS test
 
         plt.clf()
         fig, ax = plt.subplots()
 
         for u_cl in reversed(parameters.get('usedClasses')):
-                x_train = data['train'][u_cl]['predictions']
-                w_train = data['train'][u_cl]['weights']
-                plt.hist(x_train, bins=100, weights=w_train, density=True, histtype='step', range=(0,1), label=u_cl, color=dict_Classes[u_cl]['color'])
-                x_test = data['test'][u_cl]['predictions']
-                w_test = data['test'][u_cl]['weights']
-                plt.hist(x_test, bins=100, weights=w_test, density=True, histtype='step', range=(0,1), label=u_cl+' test', color=dict_Classes[u_cl]['color'], linestyle='--')
+
+            x_train = data['train'][u_cl]['predictions']
+            w_train = data['train'][u_cl]['weights']
+            sum_w_train = np.sum(w_train)
+
+            x_test = data['test'][u_cl]['predictions']
+            w_test = data['test'][u_cl]['weights']
+            sum_w_test = np.sum(w_test)
+
+            plt.hist(x_train, bins=nbins, weights=w_train, density=True, histtype='step', range=(0,1), label=dict_Classes[u_cl]['latex']+' (train)', color=dict_Classes[u_cl]['color'])
+            #plt.hist(x_test, bins=nbins, weights=w_test, density=True, histtype='step', range=(0,1), label=u_cl+' test', color=dict_Classes[u_cl]['color'], linestyle='--')
+
+            w_test_density = w_test/sum_w_test*nbins
+            test_binContents = list()
+            test_binErrors = list()
+            binCenters = list()
+
+            # Using ROOT to properly calculate bin errors. Numpy does not have an easy solution to this
+            t = TH1F('th1f_test_'+u_cl, 'no title necessary', nbins, 0, 1)
+            for i in range(len(x_test)):
+                t.Fill(x_test[i], w_test_density[i])
+            for i in range(nbins):
+                test_binContents.append(t.GetBinContent(i+1))
+                test_binErrors.append(t.GetBinError(i+1))
+                binCenters.append(i/nbins+1/nbins*0.5)
+
+            h_test,  bin_edges_test  = np.histogram(x_test,  range=(0,1), bins=nbins, weights=w_test,  density=True)
+            h_train, bin_edges_train = np.histogram(x_train, range=(0,1), bins=nbins, weights=w_train, density=True)
+            # h_test and test_binContents should be the same!!!
+            #print(h_test)
+            #print(test_binContents)
+            #print(test_binErrors)
+
+            KSstat, KSpvalue = stats.ks_2samp(x_train, x_test)
+            KS_alpha = 2*math.exp(-2*len(x_train)*len(x_test)/(len(x_train)+len(x_test))*KSstat*KSstat)
+            #KSstat, KSpvalue = stats.ks_2samp(h_train, h_test)
+            #KS_alpha = 2*math.exp(-2*len(h_train)*len(h_test)/(len(h_train)+len(h_test))*KSstat*KSstat)
+
+            test_label = dict_Classes[u_cl]['latex']+' (test, KS = %.3f)' % Decimal(KSstat)
+            plt.errorbar(binCenters, test_binContents, yerr=test_binErrors, label=test_label, color=dict_Classes[u_cl]['color'], linestyle='', marker='.')
 
         plt.legend(loc='upper center', fontsize=5, ncol=2)
         plt.xlabel('NN output')
         plt.ylabel('Normalized number of events [a. u.]')
+        plt.ylim(bottom=0)
 
         insert_dnnTag(ax, dnnTag)
         insert_CMS(ax)
@@ -251,10 +292,10 @@ def plot_PredictionTrainVSTest(dnnTag):
             for u_cl in reversed(parameters.get('usedClasses')):
                 x_train = data['train'][u_cl]['predictions'][:,i]
                 w_train = data['train'][u_cl]['weights']
-                plt.hist(x_train, bins=100, weights=w_train, density=True, histtype='step', range=(0,1), label=u_cl, color=dict_Classes[u_cl]['color'])
+                plt.hist(x_train, bins=nbins, weights=w_train, density=True, histtype='step', range=(0,1), label=u_cl, color=dict_Classes[u_cl]['color'])
                 x_test = data['test'][u_cl]['predictions'][:,i]
                 w_test = data['test'][u_cl]['weights']
-                plt.hist(x_test, bins=100, weights=w_test, density=True, histtype='step', range=(0,1), label=u_cl+' test', color=dict_Classes[u_cl]['color'], linestyle='--')
+                plt.hist(x_test, bins=nbins, weights=w_test, density=True, histtype='step', range=(0,1), label=u_cl+' test', color=dict_Classes[u_cl]['color'], linestyle='--')
 
             plt.legend(loc='upper center', fontsize=5, ncol=2)
             plt.xlabel('NN output node '+str(i))
