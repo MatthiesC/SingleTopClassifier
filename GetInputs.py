@@ -12,7 +12,7 @@ def get_InputVariableParameters():
 
     """Compiles a list of the DNN input variables based on InputDefinition."""
 
-    inputList = compileInputList()
+    inputList = np.array(compileInputList())
 
     return inputList
 

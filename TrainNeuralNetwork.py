@@ -57,18 +57,20 @@ def main():
         'splits': { 'train': 0.7, 'test': 0.15, 'validation': 0.15 },
         'augmentation': True,
         'augment_weights_only': True, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
-        'layers': [64, 64],
-        'dropout': True,
-        'dropout_rate': 0.5,
-        'epochs': 500,
+        'layers': [128, 128],
+        'dropout': False,
+        'dropout_rate': 0.1,
+        'epochs': 1,
         'batch_size': 1024, #65536 #16384
         'learning_rate': 0.0001, #Adam default: 0.001
+        'lr_decay': 0.00025,
         'regularizer': '', # either 'l1' or 'l2' or just ''
         'regularizer_rate': 0.01,
-        'focal_loss': True,
+        'focal_loss': False,
         'focal_alpha': 0.25,
         'focal_gamma': 2.0,
-        'inputVariableNames': ((compileInputList())[:,0]).tolist()
+        'inputVariableNames': (np.array(compileInputList())[:,0]).tolist(),
+        'inputVars': compileInputList() # for later use with lwtnn to compile variables.json
     }
 
     print("Using these input variables:", parameters.get('inputVariableNames'))
@@ -341,7 +343,7 @@ def define_NetworkArchitecture(parameters):
     else:
         model.add(Dense(len(parameters.get('usedClasses')), activation='softmax'))
 
-    my_optimizer = optimizers.Adam(lr=parameters.get('learning_rate'))
+    my_optimizer = optimizers.Adam(lr=parameters.get('learning_rate'), decay=parameters.get('lr_decay'))
     my_metrics = None
     my_loss = None
     if parameters.get('binary'):
