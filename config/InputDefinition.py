@@ -152,11 +152,11 @@ def compileInputList(n_hotvr=number_of_hotvr_jets, n_jets=number_of_ak4_jets):
         if var[-1] == True:
             inputList.append(["DNN__custom_"+var[0], float(var[1]), 1/float(var[2]-var[1])])
     print("Length of input vector:                            "+str(len(inputList)))
-    return np.array(inputList)
+    return inputList
 
 
 def main(n_hotvr, n_jets):
-    print(compileInputList(n_hotvr, n_jets))
+    print(np.array(compileInputList(n_hotvr, n_jets)))
 
 
 if __name__=="__main__":
