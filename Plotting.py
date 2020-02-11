@@ -221,7 +221,7 @@ def plot_PredictionTrainVSTest(dnnTag):
     parameters = get_Parameters(dnnTag)
     data = load_Predictions(dnnTag)
 
-    nbins = 20
+    nbins = 50
 
     if parameters.get('binary'): # make another plot in which you stack all backgrounds such that it is indeed only signal vs. background KS test
 
@@ -229,6 +229,8 @@ def plot_PredictionTrainVSTest(dnnTag):
         fig, ax = plt.subplots()
 
         for u_cl in reversed(parameters.get('usedClasses')):
+
+            if u_cl == 'QCD': continue
 
             x_train = data['train'][u_cl]['predictions']
             w_train = data['train'][u_cl]['weights']
@@ -292,10 +294,10 @@ def plot_PredictionTrainVSTest(dnnTag):
             for u_cl in reversed(parameters.get('usedClasses')):
                 x_train = data['train'][u_cl]['predictions'][:,i]
                 w_train = data['train'][u_cl]['weights']
-                plt.hist(x_train, bins=nbins, weights=w_train, density=True, histtype='step', range=(0,1), label=u_cl, color=dict_Classes[u_cl]['color'])
+                plt.hist(x_train, bins=nbins, weights=w_train, density=True, histtype='step', range=(0,1), label=dict_Classes[u_cl]['latex'], color=dict_Classes[u_cl]['color'])
                 x_test = data['test'][u_cl]['predictions'][:,i]
                 w_test = data['test'][u_cl]['weights']
-                plt.hist(x_test, bins=nbins, weights=w_test, density=True, histtype='step', range=(0,1), label=u_cl+' test', color=dict_Classes[u_cl]['color'], linestyle='--')
+                plt.hist(x_test, bins=nbins, weights=w_test, density=True, histtype='step', range=(0,1), label=(dict_Classes[u_cl]['latex']+' test'), color=dict_Classes[u_cl]['color'], linestyle='--')
 
             plt.legend(loc='upper center', fontsize=5, ncol=2)
             plt.xlabel('NN output node '+str(i))
@@ -325,6 +327,7 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
         w = list()
         cl = list()
         colors = list()
+        labels = list()
         for u_cl in reversed(parameters.get('usedClasses')):
             tmp_x = data[dataset_type][u_cl]['predictions']
             x.append(tmp_x)
@@ -337,8 +340,9 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
                 cl.append(u_cl)
             w.append(data[dataset_type][u_cl]['weights']*norm_factor)
             colors.append(dict_Classes[u_cl]['color'])
+            labels.append(dict_Classes[u_cl]['latex'])
 
-        plt.hist(x, bins=50, weights=w, stacked=True, range=(0,1), label=cl, color=colors)
+        plt.hist(x, bins=50, weights=w, stacked=True, range=(0,1), label=labels, color=colors)
 
         plt.legend(loc='upper center', fontsize=5, ncol=2)
         plt.xlabel('NN output')
@@ -362,6 +366,7 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
             w = list()
             cl = list()
             colors = list()
+            labels = list()
             for u_cl in reversed(parameters.get('usedClasses')):
                 tmp_x = data[dataset_type][u_cl]['predictions'][:,i]
                 x.append(tmp_x)
@@ -371,11 +376,12 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
                     cl.append(u_cl+' x'+str(norm_factor))
                 else:
                     norm_factor = 1.0
-                    cl.append(u_cl)
+                    cl.append()
                 w.append(data[dataset_type][u_cl]['weights']*norm_factor)
                 colors.append(dict_Classes[u_cl]['color'])
+                labels.append(dict_Classes[u_cl]['latex'])
 
-            plt.hist(x, bins=50, weights=w, stacked=True, range=(0,1), label=cl, color=colors)
+            plt.hist(x, bins=50, weights=w, stacked=True, range=(0,1), label=labels, color=colors)
 
             plt.legend(loc='upper center', fontsize=5, ncol=2)
             plt.xlabel('NN output node '+str(i))
@@ -387,6 +393,69 @@ def plot_PredictionsStacked(dnnTag, dataset_type):
             saveFile = './outputs/'+dnnTag+'/plots/predictions_'+dataset_type+'_node'+str(i)+'_stacked.pdf'
             fig.savefig(saveFile)
             plt.close()
+
+
+def plot_TTbarConstPredictionsStacked(dnnTag, dataset_types=['train, test, validation'], nbins=20):
+
+    print('Plotting TTbar-constant stacked prediction')
+
+    parameters = get_Parameters(dnnTag)
+    data = load_Predictions(dnnTag)
+
+    if parameters.get('binary'):
+
+        x_TTbar = np.array([])
+        w_TTbar = np.array([])
+
+        for dt in dataset_types:
+            np.append(x_TTbar, data[dataset_type]['TTbar']['predictions'])
+            np.append(w_TTbar, data[dataset_type]['TTbar']['weights'])
+
+        int_TTbar = np.sum(w_TTbar)
+        TTbar_bin_content = int_TTbar/nbins
+
+        binEdges_predValues = list()
+
+        x_TTbar_indices = x_TTbar.argsort()
+        x_TTbar = x_TTbar[x_TTbar_indices[::1]]
+        w_TTbar = w_TTbar[x_TTbar_indices[::1]]
+
+        #### go on from here
+
+        plt.clf()
+        fig, ax = plt.subplots()
+
+        x = list()
+        w = list()
+        cl = list()
+        colors = list()
+        labels = list()
+        for u_cl in reversed(parameters.get('usedClasses')):
+            tmp_x = data[dataset_type][u_cl]['predictions']
+            x.append(tmp_x)
+            norm_factor = None
+            if u_cl == 'TTbar':
+                norm_factor = 0.784 ### highly dependent on phase space / selection !!!
+                cl.append(u_cl+' x'+str(norm_factor))
+            else:
+                norm_factor = 1.0
+                cl.append(u_cl)
+            w.append(data[dataset_type][u_cl]['weights']*norm_factor)
+            colors.append(dict_Classes[u_cl]['color'])
+            labels.append(dict_Classes[u_cl]['latex'])
+
+        plt.hist(x, bins=50, weights=w, stacked=True, range=(0,1), label=labels, color=colors)
+
+        plt.legend(loc='upper center', fontsize=5, ncol=2)
+        plt.xlabel('NN output')
+        plt.ylabel('Number of events')
+
+        insert_dnnTag(ax, dnnTag)
+        insert_CMS(ax)
+
+        saveFile = './outputs/'+dnnTag+'/plots/predictions_'+dataset_type+'_NNoutput_stacked.pdf'
+        fig.savefig(saveFile)
+        plt.close()
 
 
 def plot_ROC(dnnTag, dataset_type):
@@ -443,7 +512,7 @@ def plot_ROC(dnnTag, dataset_type):
         roc_area = auc(fpr, tpr)
 
         # plot the ROC for process X in output node X!
-        label = process+" (AUC = %.3f)" % roc_area
+        label = dict_Classes[process]['latex']+" (AUC = %.3f)" % roc_area
         plt.plot(fpr, tpr, color=dict_Classes[process]['color'], label=label)
 
 
@@ -474,4 +543,5 @@ if __name__ == '__main__':
         plot_PredictionsNormalized(dnnTag, dataset_type)
         plot_PredictionsStacked(dnnTag, dataset_type)
     plot_PredictionTrainVSTest(dnnTag)
+#    plot_TTbarConstPredictionsStacked(dnnTag)
     plot_ROC(dnnTag, 'train') # maybe use train+validation set?
