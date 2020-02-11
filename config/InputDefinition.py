@@ -116,12 +116,23 @@ template_custom = [
     ["mt_w",0,300,True],
     ["n_xjets",0,10,True],
     ["ht_xjets",0,1000,True],
-    ["xjet1_m",0,100,True],
-    ["xjet1_pt",0,1000,True],
-    ["xjet1_eta",-5,5,True],
-    ["xjet1_deepjet",0,1,True],
-    ["mass_xjet1_lep",0,500,True],
-    ["dr_xjet1_lep",0,6,True]
+    ["xjet1pt_m",0,100,True],
+    ["xjet1pt_pt",0,1000,True],
+    ["xjet1pt_eta",-5,5,True],
+    ["xjet1pt_deepjet",0,1,True],
+    ["mass_xjet1pt_lep",0,500,True],
+    ["dr_xjet1pt_lep",0,6,True],
+    ["dr_xjet1pt_tjet",0,6,True],
+    ["xjet1dj_m",0,100,True],
+    ["xjet1dj_pt",0,1000,True],
+    ["xjet1dj_eta",-5,5,True],
+    ["xjet1dj_deepjet",0,1,True],
+    ["mass_xjet1dj_lep",0,500,True],
+    ["dr_xjet1dj_lep",0,6,True],
+    ["dr_xjet1dj_tjet",0,6,True],
+    ["xjet2dj_deepjet",0,1,True],
+    ["ijet1dj_deepjet",0,1,True],
+    ["ijet2dj_deepjet",0,1,True]
 ]
 
 
