@@ -60,7 +60,7 @@ def main():
         'layers': [128, 128],
         'dropout': False,
         'dropout_rate': 0.1,
-        'epochs': 1,
+        'epochs': 300,
         'batch_size': 1024, #65536 #16384
         'learning_rate': 0.0001, #Adam default: 0.001
         'lr_decay': 0.00025,
@@ -69,6 +69,7 @@ def main():
         'focal_loss': False,
         'focal_alpha': 0.25,
         'focal_gamma': 2.0,
+        #'pt_preselection': (0, 99999), # interval of toptag pt
         'inputVariableNames': (np.array(compileInputList())[:,0]).tolist(),
         'inputVars': compileInputList() # for later use with lwtnn to compile variables.json
     }
@@ -93,7 +94,7 @@ def load_Numpy(processName, inputSuffix='_norm'):
     return np.load(fileName)
 
 
-def split_TrainTestValidation(processName, percentTrain, percentTest, percentValidation, shuffle_seed, inputSuffix='_norm'):
+def split_TrainTestValidation(processName, pt_preselection, percentTrain, percentTest, percentValidation, shuffle_seed, inputSuffix='_norm'):
 
     """Splits a given numpy sample into training, test, and validation numpy files. Returns list of file names of train, test, and validation numpy files."""
 
@@ -102,6 +103,10 @@ def split_TrainTestValidation(processName, percentTrain, percentTest, percentVal
     print("Load numpy file for process:", processName)
 
     loaded_numpy = load_Numpy(processName, inputSuffix)
+    toptagpts = load_Numpy(processName, '_toptagpts')
+    # perform preselection if wanted:
+    if pt_preselection:
+        loaded_numpy = loaded_numpy[(toptagpts.flatten() > pt_preselection[0]) & (toptagpts.flatten() < pt_preselection[1])]
     cardinality = len(loaded_numpy)
 
     print("Cardinality:", cardinality)
@@ -427,8 +432,8 @@ def train_NN(parameters):
     splits = parameters.get('splits')
     seed = 0 # do this seeding more elegant in the future, see comment in split_TrainTestValidation function definition. However, need to ensure that data and weights use same seed!
     for u_cl in parameters.get('usedClasses'):
-        split_TrainTestValidation(u_cl, splits['train'], splits['test'], splits['validation'], seed)
-        split_TrainTestValidation(u_cl, splits['train'], splits['test'], splits['validation'], seed, '_weights')
+        split_TrainTestValidation(u_cl, parameters.get('pt_preselection'), splits['train'], splits['test'], splits['validation'], seed)
+        split_TrainTestValidation(u_cl, parameters.get('pt_preselection'), splits['train'], splits['test'], splits['validation'], seed, '_weights')
         seed = seed+1
 
     # get data for Keras usage!
