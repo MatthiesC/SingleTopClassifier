@@ -30,14 +30,13 @@ def read_InputVariables(rootFileName, inputArray, treeName='AnalysisTree'):
     return dataFrame
 
 
-def read_EventWeights(rootFileName, treeName='AnalysisTree'):
+def read_SpecificVariable(variableName, rootFileName, treeName='AnalysisTree'):
 
-    """Reads the event weights from a given ROOT file and translates it into numpy format. Be careful that it is read in the same order as the input variables."""
+    """Reads a specific variable from a given ROOT file and translates it into numpy format. Be careful that it is read in the same order as all input variables."""
 
-    weightsName = 'DNN_EventWeight'
     rootFile = ROOT.TFile(rootFileName)
     rootTree = rootFile.Get(treeName)
-    numpyArray = rootTree.AsMatrix(columns=[weightsName])
+    numpyArray = rootTree.AsMatrix(columns=[variableName])
 
     return numpyArray.astype(float)
 
@@ -91,10 +90,14 @@ def save_NumpyFiles(processName, is_mc, verbose=False, workdir='workdir'):
     np.save(path, norm_input)
     if verbose: print("Normalized input vector:", norm_input)
     if is_mc:
-        weights = read_EventWeights(fileNamePrefix_MC+dict_Classes[processName]['File'])
-        if verbose: print("Event weight vector:", weights)
-        path = workdir+'/'+processName+'_weights.npy'
-        np.save(path, weights)
+        weights = read_SpecificVariable('DNN_EventWeight', fileNamePrefix_MC+dict_Classes[processName]['File'])
+        toptagpts = read_SpecificVariable('DNN_TopTagPt', fileNamePrefix_MC+dict_Classes[processName]['File'])
+        if verbose:
+            print("Event weight vector:", weights)
+            print("Top-tag pT vector:", toptagpts)
+        path = workdir+'/'+processName
+        np.save(path+'_weights.npy', weights)
+        np.save(path+'_toptagpts.npy', toptagpts)
 
 
 def setup_Inputs():
