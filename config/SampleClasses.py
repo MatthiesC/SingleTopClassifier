@@ -2,47 +2,35 @@ fileNamePrefix_MC = "samples/uhh2.AnalysisModuleRunner.MC."
 fileNamePrefix_DATA = "samples/uhh2.AnalysisModuleRunner.DATA."
 
 dict_Classes = {
-    "tW_signal":{
+    "tW":{
         "Use":True,
-        "File":"ST_tW_signal.root",
-        "color": "blue",
+        "File":"ST_tW_DR_NoFullyHadronic.root",
+        "color": "red",
+        "latex": r"tW"
+    },
+    "tW_sig":{
+        "Use":True,
+        "File":"ST_tW_DR_NoFullyHadronic_Sig.root",
+        "color": "red",
         "latex": r"tW signal"
     },
-    "tW_other":{
+    "tW_bkg":{
         "Use":True,
-        "File":"ST_tW_other.root",
-        "color": "cyan",
+        "File":"ST_tW_DR_NoFullyHadronic_Bkg.root",
+        "color": "magenta",
         "latex": r"tW bkg."
-    },
-    "tW_bkg_TopToHadAndWToTau":{
-        "Use":True,
-        "File":"ST_tW_bkg_TopToHadAndWToTau.root",
-        "color": "deepskyblue",
-        "latex": r"t(h)W($\tau}$) bkg."
-    },
-    "tW_bkg_Else":{
-        "Use":True,
-        "File":"ST_tW_bkg_Else.root",
-        "color": "cyan",
-        "latex": r"other tW bkg."
-    },
-    "tChannel":{
-        "Use":True,
-        "File":"ST_non-tW_t-Ch.root",
-        "color": "orange",
-        "latex": r"$t$-channel"
-    },
-    "sChannel":{
-        "Use":True,
-        "File":"ST_non-tW_s-Ch.root",
-        "color": "brown",
-        "latex": r"$s$-channel"
     },
     "TTbar":{
         "Use":True,
         "File":"TTbar.root",
-        "color": "red",
+        "color": "orange",
         "latex": r"$\mathrm{t}\bar{\mathrm{t}}$"
+    },
+    "singletop":{
+        "Use":True,
+        "File":"ST_otherChannels.root",
+        "color": "gold",
+        "latex": r"Other single t"
     },
     "WJets":{
         "Use":True,
@@ -53,19 +41,25 @@ dict_Classes = {
     "DYJets":{
         "Use":True,
         "File":"DYJets.root",
-        "color": "gold",
+        "color": "blue",
         "latex": r"DY + jets"
     },
     "Diboson":{
         "Use":True,
         "File":"Diboson.root",
-        "color": "magenta",
+        "color": "teal",
         "latex": r"VV"
+    },
+    "Electroweak":{
+        "Use":True,
+        "File":"Electroweak.root",
+        "color": "green",
+        "latex": r"W/DY+jets, VV",
     },
     "QCD":{
         "Use":True,
         "File":"QCD.root",
-        "color": "gray",
+        "color": "dimgray",
         "latex": r"QCD"
     }
 }

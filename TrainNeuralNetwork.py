@@ -29,11 +29,15 @@ from datetime import datetime
 
 ### global variables
 
+region = 'wtag'
+
 # use a time tag to identify trained models later (for details, look up the parameters.json in the output dir)
 timeTag = datetime.now()
 timeTag = timeTag.strftime('%y-%m-%d-%H-%M-%S')
-outputDir = './outputs/dnn_'+timeTag+'/'
+outputDir = './outputs/'+region+'_dnn_'+timeTag+'/'
 checkpointDir = 'checkpoints/' #subfolder of outputDir
+
+
 
 ### end of global stuff
 
@@ -49,19 +53,23 @@ def main():
     os.makedirs(outputDir+'workdir/', exist_ok=True)
 
     parameters = {
-        'binary': True,
-        'binary_signal': 'tW_signal', # define background composition via usedClasses
-        'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
+        'region': region,
+        'binary': False,
+        'binary_signal': 'tW', # define background composition via usedClasses
+        #'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar', 'WJets', 'DYJets'],
         #'usedClasses': ['tW_signal', 'tW_bkg_TopToHadAndWToTau', 'tW_bkg_Else', 'TTbar'],
         #'usedClasses': ['tW_signal', 'TTbar'],
+        #'usedClasses': ['tW_sig', 'tW_bkg', 'TTbar', 'WJets', 'DYJets', 'Diboson'],
+        #'usedClasses': ['tW_sig', 'tW_bkg', 'TTbar', 'Electroweak'],
+        'usedClasses': ['tW', 'TTbar', 'Electroweak'],
         'splits': { 'train': 0.7, 'test': 0.15, 'validation': 0.15 },
         'augmentation': True,
         'augment_weights_only': True, # 'False': Will take several minutes to augment data. Use 'True' for quick test runs
-        'layers': [128, 128],
+        'layers': [128, 128, 128, 128],
         'dropout': False,
         'dropout_rate': 0.1,
-        'epochs': 300,
-        'batch_size': 1024, #65536 #16384
+        'epochs': 100,
+        'batch_size': 1024, #65536, #16384
         'learning_rate': 0.0001, #Adam default: 0.001
         'lr_decay': 0.00025,
         'regularizer': '', # either 'l1' or 'l2' or just ''
@@ -70,8 +78,8 @@ def main():
         'focal_alpha': 0.25,
         'focal_gamma': 2.0,
         #'pt_preselection': (0, 99999), # interval of toptag pt
-        'inputVariableNames': (np.array(compileInputList())[:,0]).tolist(),
-        'inputVars': compileInputList() # for later use with lwtnn to compile variables.json
+        'inputVariableNames': (np.array(compileInputList(region))[:,0]).tolist(),
+        'inputVars': compileInputList(region) # for later use with lwtnn to compile variables.json
     }
 
     print("Using these input variables:", parameters.get('inputVariableNames'))
@@ -90,7 +98,7 @@ def load_Numpy(processName, inputSuffix='_norm'):
 
     """Loads numpy file from work directory. Needs process name (TTbar, QCD, etc.) and file name suffix (default = '_norm')."""
 
-    fileName = './workdir/'+processName+inputSuffix+'.npy'
+    fileName = './workdir_'+region+'/'+processName+inputSuffix+'.npy'
     return np.load(fileName)
 
 
@@ -103,10 +111,10 @@ def split_TrainTestValidation(processName, pt_preselection, percentTrain, percen
     print("Load numpy file for process:", processName)
 
     loaded_numpy = load_Numpy(processName, inputSuffix)
-    toptagpts = load_Numpy(processName, '_toptagpts')
+    taggedjetpts = load_Numpy(processName, '_taggedjetpts')
     # perform preselection if wanted:
     if pt_preselection:
-        loaded_numpy = loaded_numpy[(toptagpts.flatten() > pt_preselection[0]) & (toptagpts.flatten() < pt_preselection[1])]
+        loaded_numpy = loaded_numpy[(taggedjetpts.flatten() > pt_preselection[0]) & (taggedjetpts.flatten() < pt_preselection[1])]
     cardinality = len(loaded_numpy)
 
     print("Cardinality:", cardinality)
@@ -114,7 +122,7 @@ def split_TrainTestValidation(processName, pt_preselection, percentTrain, percen
     absoluteTrain = int(cardinality*percentTrain)
     absoluteTest = int(cardinality*percentTest)
     absoluteValidation = int(cardinality*percentValidation)
-    
+
     print("Will split set into train/test/valdiation samples of sizes:", absoluteTrain, absoluteTest, absoluteValidation)
 
     # need to shuffle since hadd presumably does not shuffle... (e.g. WJets is ordered by Pt sample bins, TTbar is ordered by Mtt)
@@ -124,7 +132,7 @@ def split_TrainTestValidation(processName, pt_preselection, percentTrain, percen
     numpyTrain = loaded_numpy[0:absoluteTrain]
     numpyTest = loaded_numpy[absoluteTrain:absoluteTrain+absoluteTest]
     numpyValidation = loaded_numpy[absoluteTrain+absoluteTest:absoluteTrain+absoluteTest+absoluteValidation]
-    
+
     fileNameTrain = outputDir+'workdir/'+processName+inputSuffix+'_train.npy'
     fileNameTest = outputDir+'workdir/'+processName+inputSuffix+'_test.npy'
     fileNameValidation = outputDir+'workdir/'+processName+inputSuffix+'_validation.npy'

@@ -8,11 +8,11 @@ import numpy as np
 import pandas
 
 
-def get_InputVariableParameters():
+def get_InputVariableParameters(region):
 
     """Compiles a list of the DNN input variables based on InputDefinition."""
 
-    inputList = np.array(compileInputList())
+    inputList = np.array(compileInputList(region))
 
     return inputList
 
@@ -64,40 +64,70 @@ def create_Path(path):
         print("Created path '%s'" % (path))
 
 
-def save_NumpyFiles(processName, is_mc, verbose=False, workdir='workdir'):
+def save_NumpyFiles(processName, is_mc, region, verbose=False, workdir_='workdir'):
 
     """Save input vectors and event weights as numpy files in workdir. Specify process name (TTbar, WJets, etc.) as in SampleClasses.py"""
 
+    workdir = workdir_+'_'+region
+
     create_Path(workdir)
 
-    print("Saving numpy files for process:", processName)
+    print("Saving numpy files for region/process:", region, processName)
 
-    inputVariables = get_InputVariableParameters()
+    inputVariables = get_InputVariableParameters(region)
 
     dataFrame = None
-    if is_mc:
-        dataFrame = read_InputVariables(fileNamePrefix_MC+dict_Classes[processName]['File'], inputVariables)
-    else:
-        dataFrame = read_InputVariables(fileNamePrefix_DATA+dict_Classes[processName]['File'], inputVariables)
+    #dataFrame_ele = None
+    #dataFrame_muo = None
+    #if is_mc:
+    dataFrame = read_InputVariables(fileNamePrefix_MC.replace('samples/', 'samples/run2/')+dict_Classes[processName]['File'], inputVariables)
+    #dataFrame_ele = read_InputVariables(fileNamePrefix_MC.replace('samples/', 'samples/ele/')+dict_Classes[processName]['File'], inputVariables)
+    #dataFrame_muo = read_InputVariables(fileNamePrefix_MC.replace('samples/', 'samples/muo/')+dict_Classes[processName]['File'], inputVariables)
+    # else:
+    # dataFrame = read_InputVariables(fileNamePrefix_DATA+dict_Classes[processName]['File'], inputVariables)
+
+    #dataFrame = pandas.concat([dataFrame_ele, dataFrame_muo], ignore_index=True, sort=False)
+
+    which_region = read_SpecificVariable('which_region', fileNamePrefix_MC.replace('samples/', 'samples/run2/')+dict_Classes[processName]['File']) # 1 = ttag region, 2 = wtag region
+    which_region = which_region.flatten()
+    region_value = 0
+    if region=='ttag':
+        region_value = 1
+    elif region=='wtag':
+        region_value = 2
+    which_region_boolean = which_region == region_value
 
     path = workdir+'/'+processName+'.npy'
     np.save(path, dataFrame)
-    loaded_input = np.load(path)
+    loaded_input_nottrimmed = np.load(path)
+    loaded_input = loaded_input_nottrimmed[which_region_boolean]
     print("Number of events:", len(loaded_input))
     if verbose: print("Input vector:\n", loaded_input)
     norm_input = normalize_InputVectorEntries(loaded_input, inputVariables)
     path = workdir+'/'+processName+'_norm.npy'
     np.save(path, norm_input)
     if verbose: print("Normalized input vector:", norm_input)
-    if is_mc:
-        weights = read_SpecificVariable('DNN_EventWeight', fileNamePrefix_MC+dict_Classes[processName]['File'])
-        toptagpts = read_SpecificVariable('DNN_TopTagPt', fileNamePrefix_MC+dict_Classes[processName]['File'])
-        if verbose:
-            print("Event weight vector:", weights)
-            print("Top-tag pT vector:", toptagpts)
-        path = workdir+'/'+processName
-        np.save(path+'_weights.npy', weights)
-        np.save(path+'_toptagpts.npy', toptagpts)
+    #if is_mc:
+    weights = read_SpecificVariable('DNNinfo_event_weight', fileNamePrefix_MC.replace('samples/', 'samples/run2/')+dict_Classes[processName]['File'])
+    weights_trimmed = weights[which_region_boolean]
+    #weights_ele = read_SpecificVariable('DNNinfo_event_weight', fileNamePrefix_MC.replace('samples/', 'samples/ele/')+dict_Classes[processName]['File'])
+    #weights_muo = read_SpecificVariable('DNNinfo_event_weight', fileNamePrefix_MC.replace('samples/', 'samples/muo/')+dict_Classes[processName]['File'])
+    #wtagpts = read_SpecificVariable('DNNinfo_wjet_pt', fileNamePrefix_MC.replace('samples/', 'samples/run2/')+dict_Classes[processName]['File'])
+    #wtagpts_ele = read_SpecificVariable('DNNinfo_wjet_pt', fileNamePrefix_MC.replace('samples/', 'samples/ele/')+dict_Classes[processName]['File'])
+    #wtagpts_muo = read_SpecificVariable('DNNinfo_wjet_pt', fileNamePrefix_MC.replace('samples/', 'samples/muo/')+dict_Classes[processName]['File'])
+    taggedjetpts = read_SpecificVariable('DNNinfo_'+region.replace('tag', 'jet')+'_pt', fileNamePrefix_MC.replace('samples/', 'samples/run2/')+dict_Classes[processName]['File'])
+    taggedjetpts_trimmed = taggedjetpts[which_region_boolean]
+    #weights = np.concatenate((weights_ele, weights_muo))
+    #wtagpts = np.concatenate((wtagpts_ele, wtagpts_muo))
+    if verbose:
+        print("Event weight vector:", weights_trimmed)
+        #print("W-tag pT vector:", wtagpts)
+        print(region+" pT vector:", taggedjetpts_trimmed)
+    path = workdir+'/'+processName
+    np.save(path+'_weights.npy', weights_trimmed)
+    np.save(path+'_taggedjetpts.npy', taggedjetpts_trimmed)
+    #np.save(path+'_ttagpts.npy', ttagpts)
+    #np.save(path+'_whichregion.npy', which_region)
 
 
 def setup_Inputs():
@@ -111,7 +141,8 @@ def setup_Inputs():
     print("Working on theses processes:", processes)
 
     for p in processes:
-        save_NumpyFiles(p, True)
+        save_NumpyFiles(p, True, 'ttag')
+        save_NumpyFiles(p, True, 'wtag')
 
 
 if __name__=="__main__":
